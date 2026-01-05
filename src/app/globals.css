@@ -1,26 +1,96 @@
-@import "tailwindcss";
+/* File: src/app/globals.css */
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* 1. Mengimpor library dasar Tailwind */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+/* 2. Mendefinisikan Variabel CSS (Tema Website) */
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    /* --- BACKGROUND & FOREGROUND (Dasar) --- */
+    /* Putih bersih untuk latar belakang */
+    --background: 0 0% 100%;
+    /* Hitam hampir pekat untuk teks agar mudah dibaca */
+    --foreground: 240 10% 3.9%;
+
+    /* --- PRIMARY COLOR (Identitas Departemen) --- */
+    /* Warna Hijau Daun (Plant Protection Green) */
+    /* Format HSL: Hue Saturation Lightness */
+    --primary: 142.1 76.2% 36.3%;
+    --primary-foreground: 355.7 100% 97.3%;
+    /* Teks putih di atas hijau */
+
+    /* --- SECONDARY COLOR (Elemen Pendukung) --- */
+    /* Abu-abu sangat muda untuk background section selingan */
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+
+    /* --- UI ELEMENTS (Kartu, Popover, Dialog) --- */
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+
+    /* --- MUTED (Teks kurang penting/Caption) --- */
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+
+    /* --- ACCENT (Hover states) --- */
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+
+    /* --- DESTRUCTIVE (Tombol Hapus/Error) --- */
+    --destructive: 0 84.2% 60.2%;
+    /* Merah */
+    --destructive-foreground: 0 0% 98%;
+
+    /* --- BORDERS & INPUTS --- */
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+
+    /* Ring fokus saat user klik input (Warna Hijau Primary) */
+    --ring: 142.1 76.2% 36.3%;
+
+    /* Kebulatan sudut (Border Radius) */
+    --radius: 0.5rem;
+    /* Setara 8px */
+  }
+
+  /* Mode Gelap (Opsional, disiapkan jika nanti butuh) */
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 142.1 70.6% 45.3%;
+    /* Hijau lebih terang agar kontras di mode gelap */
+    --primary-foreground: 144.9 80.4% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 142.4 71.8% 29.2%;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* 3. Menerapkan variabel ke elemen dasar HTML */
+@layer base {
+  * {
+    /* Menerapkan warna border default ke semua elemen */
+    @apply border-border;
+  }
+
+  body {
+    /* Menerapkan warna background dan text default */
+    @apply bg-background text-foreground;
+  }
 }

@@ -1,0 +1,14 @@
+{
+   "Metadata": {
+      "title": "Department of Plant Protection - Andalas University",
+      "description": "Official Website of Plant Protection Department"
+   },
+   "Error": {
+      "title": "Something went wrong!",
+      "description": "We apologize for the inconvenience."
+   },
+   "NotFound": {
+      "title": "Page Not Found",
+      "description": "The page you are looking for does not exist."
+   }
+}
