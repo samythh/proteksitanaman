@@ -9,9 +9,12 @@ import "@/app/globals.css";
 // import { type Locale } from "@/i18n/settings"; 
 import { ReactNode } from "react";
 import AccessibilityWidget from "@/components/AccessibilityWidget";
+import ScrollToTop from "@/components/ui/ScrollToTop";
 
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/ui/footer";
+
+import SmoothScrolling from "@/components/ui/SmoothScrolling";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -50,8 +53,12 @@ export default async function LocaleLayout({ children, params }: Props) {
 
                <Footer locale={locale} />
 
-               <AccessibilityWidget />
+               <ScrollToTop />
+               
+               <SmoothScrolling />
 
+               <AccessibilityWidget />
+               
             </NextIntlClientProvider>
          </body>
       </html>
