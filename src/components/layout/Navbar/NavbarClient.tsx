@@ -51,15 +51,53 @@ export default function NavbarClient({
    const [isVisible, setIsVisible] = React.useState(true);
    const lastScrollY = React.useRef(0);
    const navbarRef = React.useRef<HTMLElement>(null);
+
    const pathname = usePathname();
    const router = useRouter();
 
-   const currentLang = pathname.startsWith("/en") ? "en" : "id";
+   // Deteksi bahasa saat ini (Default 'id')
+   const currentLang = pathname?.startsWith("/en") ? "en" : "id";
+
+   // --- LOGIC UTAMA: PERBAIKAN URL ---
+   const getLocalizedUrl = (url: string | null) => {
+      if (!url) return "#";
+
+      // 1. Cek Link Eksternal / Anchor
+      if (url.startsWith("http") || url.startsWith("https") || url.startsWith("#")) {
+         return url;
+      }
+
+      // 2. Bersihkan URL (Hapus localhost jika tidak sengaja tertulis)
+      // Regex ini menghapus "http://localhost:3000" atau domain apapun di depan
+      let cleanUrl = url.replace(/^(?:https?:\/\/)?[^\/]+/, "");
+
+      // Pastikan diawali dengan slash. "informasi" -> "/informasi"
+      if (!cleanUrl.startsWith("/")) {
+         cleanUrl = "/" + cleanUrl;
+      }
+
+      // 3. LOGIKA SEGMENT (YANG PALING AKURAT)
+      // Kita pecah URL: "/informasi/berita" -> ["", "informasi", "berita"]
+      const segments = cleanUrl.split("/");
+      const firstSegment = segments[1]; // Ambil kata pertama setelah slash awal
+
+      // Cek apakah kata pertama adalah 'id' atau 'en'
+      if (firstSegment === "id" || firstSegment === "en") {
+         // Jika sudah ada (misal input: /id/berita), kembalikan apa adanya
+         return cleanUrl;
+      }
+
+      // 4. Jika belum ada, PAKSA tambahkan di depan
+      // Hasil: /id + /informasi/berita
+      return `/${currentLang}${cleanUrl}`;
+   };
 
    const switchLanguage = (newLang: string) => {
       if (newLang === currentLang) return;
       const newPath = pathname.replace(`/${currentLang}`, `/${newLang}`);
-      router.push(newPath);
+      // Handle edge case jika di homepage root "/"
+      const finalPath = newPath === pathname ? `/${newLang}${pathname}` : newPath;
+      router.push(finalPath.replace("//", "/"));
    };
 
    // --- Animation Logic (Entry & Exit) ---
@@ -68,15 +106,13 @@ export default function NavbarClient({
          setIsDrawerVisible(true);
          setIsClosing(false);
       } else if (isDrawerVisible) {
-         // Start exit animation
          setIsClosing(true);
          const timeout = setTimeout(() => {
             setIsDrawerVisible(false);
             setIsClosing(false);
-         }, 350); // Match duration-350 CSS
+         }, 350);
          return () => clearTimeout(timeout);
       }
-      // PERBAIKAN 1: Menambahkan isDrawerVisible ke dependency array
    }, [mobileMenuOpen, isDrawerVisible]);
 
    // --- Scroll Logic ---
@@ -103,7 +139,6 @@ export default function NavbarClient({
       setMobileMenuOpen(false);
    }, [pathname]);
 
-   // Prevent body scroll
    React.useEffect(() => {
       if (mobileMenuOpen || isDrawerVisible) {
          document.body.style.overflow = "hidden";
@@ -183,7 +218,7 @@ export default function NavbarClient({
                                              {section.links.map((link, lIdx) => (
                                                 <li key={lIdx}>
                                                    <Link
-                                                      href={link.url || "#"}
+                                                      href={getLocalizedUrl(link.url)}
                                                       className="block text-sm text-gray-600 hover:text-green-700 hover:bg-green-50 px-2 py-1.5 rounded transition-colors"
                                                    >
                                                       {link.label}
@@ -198,7 +233,7 @@ export default function NavbarClient({
                            </>
                         ) : (
                            <Link
-                              href={item.url || "#"}
+                              href={getLocalizedUrl(item.url)}
                               className="px-5 py-2 rounded-full text-sm font-semibold hover:bg-white/10 transition-colors block"
                            >
                               {item.label}
@@ -253,7 +288,6 @@ export default function NavbarClient({
          {/* --- MOBILE OFF-CANVAS DRAWER MENU --- */}
          {isDrawerVisible && (
             <>
-               {/* Backdrop */}
                <div
                   className={cn(
                      "fixed inset-0 z-[60] bg-black/60 lg:hidden transition-opacity duration-300 ease-in-out",
@@ -265,7 +299,6 @@ export default function NavbarClient({
                   aria-hidden="true"
                />
 
-               {/* PERBAIKAN 2: Mengganti tag 'aside' menjadi 'div' agar sesuai dengan role="dialog" */}
                <div
                   className={cn(
                      "fixed top-0 right-0 h-screen w-[85%] max-w-[320px] bg-[#005320] shadow-2xl z-[70] flex flex-col lg:hidden ",
@@ -274,12 +307,9 @@ export default function NavbarClient({
                   )}
                   role="dialog"
                   aria-modal="true"
-                  // PERBAIKAN 3: Menambahkan aria-labelledby yang merujuk ke ID judul
                   aria-labelledby="mobile-drawer-title"
                >
-                  {/* Header Drawer */}
                   <div className="flex items-center justify-between h-[72px] px-6 border-b border-white/10 shrink-0 rounded-t-lg">
-                     {/* Menambahkan ID agar bisa dikenali oleh aria-labelledby */}
                      <h2
                         id="mobile-drawer-title"
                         className="text-xl font-bold text-white tracking-wide"
@@ -295,7 +325,6 @@ export default function NavbarClient({
                      </button>
                   </div>
 
-                  {/* Body Drawer (Scrollable) */}
                   <div className="flex-1 overflow-y-auto bg-[#033b19b0] overscroll-contain px-6 py-6">
                      <ul className="space-y-6">
                         {menuItems.map((item, i) => (
@@ -316,7 +345,7 @@ export default function NavbarClient({
                                              {sec.links.map((link, k) => (
                                                 <li key={k}>
                                                    <Link
-                                                      href={link.url || "#"}
+                                                      href={getLocalizedUrl(link.url)}
                                                       onClick={() => setMobileMenuOpen(false)}
                                                       className="block text-sm text-white/80 hover:text-white hover:translate-x-1 transition-all"
                                                    >
@@ -330,7 +359,7 @@ export default function NavbarClient({
                                  </div>
                               ) : (
                                  <Link
-                                    href={item.url || "#"}
+                                    href={getLocalizedUrl(item.url)}
                                     onClick={() => setMobileMenuOpen(false)}
                                     className="block text-sm text-white/80 hover:text-yellow-400 -mt-1"
                                  >
@@ -342,7 +371,6 @@ export default function NavbarClient({
                      </ul>
                   </div>
 
-                  {/* Footer Drawer (Lang Switcher) */}
                   <div className="p-6 border-t border-white/10 bg-[#00461b] shrink-0 rounded-b-lg">
                      <div className="grid grid-cols-2 gap-3">
                         <button
