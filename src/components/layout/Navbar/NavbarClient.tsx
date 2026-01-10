@@ -48,7 +48,6 @@ export default function NavbarClient({
   const [isDrawerVisible, setIsDrawerVisible] = React.useState(false);
   const [isClosing, setIsClosing] = React.useState(false);
 
-<<<<<<< HEAD
   const [isVisible, setIsVisible] = React.useState(true);
   const lastScrollY = React.useRef(0);
   const navbarRef = React.useRef<HTMLElement>(null);
@@ -56,28 +55,6 @@ export default function NavbarClient({
   const router = useRouter();
 
   const currentLang = pathname.startsWith("/en") ? "en" : "id";
-=======
-   const lastScrollY = React.useRef(0);
-   const pathname = usePathname();
-   const router = useRouter();
-
-   const currentLang = pathname.startsWith('/en') ? 'en' : 'id';
-
-   // Helper untuk memperbaiki URL dengan prefix bahasa
-   const getLocalizedUrl = (url: string | null) => {
-      if (!url) return "#";
-      if (url.startsWith("http") || url.startsWith("#")) return url;
-      if (url.startsWith(`/${currentLang}`)) return url;
-      const cleanUrl = url.startsWith("/") ? url : `/${url}`;
-      return `/${currentLang}${cleanUrl}`;
-   };
-
-   const switchLanguage = (newLang: string) => {
-      if (newLang === currentLang) return;
-      const newPath = pathname.replace(`/${currentLang}`, `/${newLang}`);
-      router.push(newPath);
-   };
->>>>>>> 6cc902eb535934582cfcd3ae285aba30949011cb
 
   const switchLanguage = (newLang: string) => {
     if (newLang === currentLang) return;
