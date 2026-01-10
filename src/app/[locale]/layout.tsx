@@ -8,6 +8,7 @@ import "@/app/globals.css";
 // PERBAIKAN 1: Hapus import 'Locale' yang tidak terpakai
 // import { type Locale } from "@/i18n/settings"; 
 import { ReactNode } from "react";
+import AccessibilityWidget from "@/components/AccessibilityWidget";
 
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/ui/footer";
@@ -48,6 +49,8 @@ export default async function LocaleLayout({ children, params }: Props) {
                </main>
 
                <Footer locale={locale} />
+
+               <AccessibilityWidget />
 
             </NextIntlClientProvider>
          </body>
