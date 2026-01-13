@@ -1,14 +1,21 @@
 {
    "Metadata": {
-      "title": "Departemen Proteksi Tanaman - Universitas Andalas",
-      "description": "Website Resmi Departemen Proteksi Tanaman"
+      "title": "Departemen Proteksi Tanaman"
    },
-   "Error": {
-      "title": "Terjadi kesalahan!",
-      "description": "Mohon maaf atas ketidaknyamanan ini."
+   "HomePage": {
+      "title": "Beranda",
+      "hero_title": "Melindungi Tanaman, Menjaga Masa Depan"
    },
-   "NotFound": {
-      "title": "Halaman Tidak Ditemukan",
-      "description": "Halaman yang Anda cari tidak tersedia."
+   "Navigation": {
+      "home": "Beranda",
+      "news": "Berita & Artikel",
+      "profile": "Profil",
+      "academic": "Akademik",
+      "facility": "Fasilitas",
+      "contact": "Kontak"
+   },
+   "News": {
+      "read_more": "Baca Selengkapnya",
+      "no_news": "Belum ada berita"
    }
 }

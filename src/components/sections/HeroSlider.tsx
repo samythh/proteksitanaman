@@ -5,17 +5,44 @@ import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
-import { HeroSliderBlock } from '@/types/sections';
-import { getStrapiMedia } from '@/lib/strapi/utils';
+
+// --- DEFINISI TIPE DATA ---
+
+// Meng-cover struktur Flat (v5) dan Nested (v4)
+interface SlideImage {
+   url?: string;
+   alternativeText?: string;
+   data?: {
+      attributes: {
+         url: string;
+         alternativeText?: string;
+      };
+   };
+}
+
+interface SlideItem {
+   id: number;
+   title: string;
+   subtitle?: string;
+   buttonText?: string;
+   buttonLink?: string;
+   image?: SlideImage;
+}
+
+interface HeroSliderData {
+   slides?: SlideItem[];
+}
 
 interface HeroSliderProps {
-   data: HeroSliderBlock;
+   data: HeroSliderData;
 }
 
 export default function HeroSlider({ data }: HeroSliderProps) {
    const [current, setCurrent] = useState(0);
-   const slides = data.slides || [];
+   const slides = data?.slides || [];
    const length = slides.length;
+
+   const STRAPI_URL = process.env.NEXT_PUBLIC_STRAPI_API_URL || "http://localhost:1337";
 
    const nextSlide = useCallback(() => {
       setCurrent((prev) => (prev === length - 1 ? 0 : prev + 1));
@@ -36,9 +63,20 @@ export default function HeroSlider({ data }: HeroSliderProps) {
    if (length === 0) return null;
 
    return (
-      <section className="relative w-full h-[500px] md:h-[600px] lg:h-[700px] bg-gray-900 overflow-hidden group -mt-[85px]">
-         {slides.map((slide, index) => {
-            const imageUrl = getStrapiMedia(slide.image?.url || null);
+      <section className="relative w-full h-[500px] md:h-[600px] lg:h-[700px] bg-gray-900 overflow-hidden group -mt-20 lg:-mt-24">
+         {/* Menggunakan tipe eksplisit untuk index (idx: number) */}
+         {slides.map((slide: SlideItem, index: number) => {
+
+            // Logic URL Gambar
+            let rawUrl = slide.image?.url;
+            if (!rawUrl) rawUrl = slide.image?.data?.attributes?.url;
+
+            let imageUrl = "";
+            if (rawUrl) {
+               imageUrl = rawUrl.startsWith("http") ? rawUrl : `${STRAPI_URL}${rawUrl}`;
+            }
+
+            const altText = slide.image?.alternativeText || slide.image?.data?.attributes?.alternativeText || slide.title;
             const isActive = index === current;
 
             return (
@@ -49,11 +87,11 @@ export default function HeroSlider({ data }: HeroSliderProps) {
                   {imageUrl ? (
                      <Image
                         src={imageUrl}
-                        alt={slide.image?.alternativeText || slide.title || 'Hero Image'}
+                        alt={altText || 'Hero Image'}
                         fill
                         className="object-cover"
                         priority={index === 0}
-                        sizes="(max-width: 768px) 100vw, 100vw"
+                        sizes="100vw"
                      />
                   ) : (
                      <div className="w-full h-full bg-slate-800 flex items-center justify-center">
@@ -68,7 +106,7 @@ export default function HeroSlider({ data }: HeroSliderProps) {
                         {slide.title}
                      </h2>
 
-                     {slide.subtitle && (
+                     {(slide.subtitle) && (
                         <p className={`text-gray-200 text-lg md:text-xl max-w-2xl font-light leading-relaxed drop-shadow-md transition-all duration-700 delay-200 transform ${isActive ? 'translate-x-0 opacity-100' : '-translate-x-10 opacity-0'}`}>
                            {slide.subtitle}
                         </p>
@@ -79,7 +117,7 @@ export default function HeroSlider({ data }: HeroSliderProps) {
                            <Link
                               href={slide.buttonLink || '#'}
                               target={slide.buttonLink?.startsWith('http') ? '_blank' : '_self'}
-                              className="px-8 py-3 bg-[#005700] hover:bg-[#004200] text-white rounded-full font-medium transition-all shadow-lg border border-green-500/30 hover:scale-105 active:scale-95 inline-block"
+                              className="px-8 py-3 bg-yellow-400 hover:bg-yellow-500 text-[#005320] rounded-full font-bold transition-all shadow-lg hover:scale-105 active:scale-95 inline-block"
                            >
                               {slide.buttonText}
                            </Link>
@@ -92,19 +130,30 @@ export default function HeroSlider({ data }: HeroSliderProps) {
 
          {length > 1 && (
             <>
-               <button onClick={prevSlide} className="absolute left-4 top-1/2  p-3 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/10 transition-all z-30 opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 duration-300">
+               <button
+                  onClick={prevSlide}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/10 transition-all z-30 opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 duration-300"
+                  aria-label="Previous slide"
+               >
                   <ChevronLeft size={32} />
                </button>
-               <button onClick={nextSlide} className="absolute right-4 top-1/2  p-3 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/10 transition-all z-30 opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 duration-300">
+               <button
+                  onClick={nextSlide}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/10 transition-all z-30 opacity-0 group-hover:opacity-100 -translate-x-4 group-hover:translate-x-0 duration-300"
+                  aria-label="Next slide"
+               >
                   <ChevronRight size={32} />
                </button>
+
                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex space-x-3 z-30">
-                  {slides.map((_, idx) => (
+                  {/* PERBAIKAN: Menambahkan tipe idx: number dan aria-label */}
+                  {slides.map((_, idx: number) => (
                      <button
                         key={idx}
                         onClick={() => setCurrent(idx)}
+                        // PENTING: aria-label wajib ada untuk aksesibilitas (Axe Linter)
                         aria-label={`Go to slide ${idx + 1}`}
-                        className={`h-2 rounded-full transition-all duration-300 shadow-sm ${idx === current ? 'w-8 bg-[#005700] border border-white/50' : 'w-2 bg-white/50 hover:bg-white'}`}
+                        className={`h-2 rounded-full transition-all duration-300 shadow-sm ${idx === current ? 'w-8 bg-yellow-400' : 'w-2 bg-white/50 hover:bg-white'}`}
                      />
                   ))}
                </div>
