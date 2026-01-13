@@ -1,14 +1,21 @@
 {
    "Metadata": {
-      "title": "Department of Plant Protection - Andalas University",
-      "description": "Official Website of Plant Protection Department"
+      "title": "Department of Plant Protection"
    },
-   "Error": {
-      "title": "Something went wrong!",
-      "description": "We apologize for the inconvenience."
+   "HomePage": {
+      "title": "Home",
+      "hero_title": "Protecting Plants, Preserving the Future"
    },
-   "NotFound": {
-      "title": "Page Not Found",
-      "description": "The page you are looking for does not exist."
+   "Navigation": {
+      "home": "Home",
+      "news": "News & Articles",
+      "profile": "Profile",
+      "academic": "Academic",
+      "facility": "Facility",
+      "contact": "Contact"
+   },
+   "News": {
+      "read_more": "Read More",
+      "no_news": "No news available"
    }
-}
+}  

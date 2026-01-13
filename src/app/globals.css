@@ -93,4 +93,24 @@
     /* Menerapkan warna background dan text default */
     @apply bg-background text-foreground;
   }
+
+    html.lenis, html.lenis body {
+    height: auto;
+  }
+
+  .lenis.lenis-smooth {
+    scroll-behavior: auto !important; /* Matikan smooth scroll bawaan browser agar Lenis yang ambil alih */
+  }
+
+  .lenis.lenis-smooth [data-lenis-prevent] {
+    overscroll-behavior: contain;
+  }
+
+  .lenis.lenis-stopped {
+    overflow: hidden;
+  }
+
+  .lenis.lenis-scrolling iframe {
+    pointer-events: none;
+  }
 }

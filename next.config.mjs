@@ -1,32 +1,38 @@
 // File: next.config.mjs
 import createNextIntlPlugin from 'next-intl/plugin';
 
-const withNextIntl = createNextIntlPlugin();
-
 /** @type {import('next').NextConfig} */
+
+// 1. Setup Plugin Bahasa
+const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
+
+// 2. Setup Konfigurasi Utama (Gambar)
 const nextConfig = {
-   // Konfigurasi Image Optimization Next.js
    images: {
+      // Matikan optimasi static sementara jika perlu, tapi remotePatterns lebih penting
       remotePatterns: [
          {
-            // Mengizinkan gambar dari server Strapi Anda
-            protocol: 'http',
-            hostname: '202.10.34.176',
-            port: '1337',
-            pathname: '/uploads/**', // Folder default upload Strapi
-         },
-         {
-            // Mengizinkan gambar placeholder dari localhost (opsional, untuk dev)
             protocol: 'http',
             hostname: 'localhost',
             port: '1337',
             pathname: '/uploads/**',
          },
+         {
+            protocol: 'http',
+            hostname: '127.0.0.1',
+            port: '1337',
+            pathname: '/uploads/**',
+         },
+         // --- INI YANG PALING PENTING UNTUK ERROR ANDA ---
+         {
+            protocol: 'http',
+            hostname: '202.10.34.176', // IP Server Strapi
+            port: '1337',              // Port Server Strapi
+            pathname: '/uploads/**',   // Folder gambar Strapi
+         },
       ],
    },
-   // Opsi tambahan untuk performa (opsional tapi disarankan)
-   reactStrictMode: true,
 };
 
-// Bungkus config dengan plugin next-intl untuk i18n
+// 3. Export Gabungan
 export default withNextIntl(nextConfig);
