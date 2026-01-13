@@ -9,52 +9,30 @@ type Props = {
    params: Promise<{ locale: string }>;
 };
 
-// ... (Interface StrapiArticleItem dan fungsi getArticles TETAP SAMA, tidak perlu diubah) ...
-interface StrapiArticleItem {
-   id: number;
-   title: string;
-   slug: string;
-   publishedAt: string;
-   publishedDate?: string;
-   description?: string;
-   excerpt?: string;
-   cover?: {
-      url?: string;
-      alternativeText?: string;
-      data?: { attributes: { url: string; }; };
-   };
-   category?: {
-      name: string;
-      slug: string;
-      color?: string;
-   };
-}
-
+// --- 1. FETCH DATA (Diperbaiki) ---
 async function getArticles(locale: string) {
-   // ... (Kode query tetap sama) ...
-   const heroQuery = qs.stringify({
-      locale,
-      sort: ['publishedAt:desc'],
-      pagination: { pageSize: 5 },
-      populate: { cover: { fields: ['url', 'alternativeText'] }, category: { fields: ['name', 'slug', 'color'] } },
-   });
+   try {
+      const query = qs.stringify({
+         locale: locale,
+         sort: ['publishedDate:desc', 'publishedAt:desc'],
+         pagination: {
+            page: 1,
+            pageSize: 14,
+         },
+         populate: {
+            cover: { fields: ['url', 'alternativeText'] },
+            category: { fields: ['name', 'slug', 'color'] }
+         },
+         // PERBAIKAN DISINI: Menghapus 'description' karena field itu tidak ada di Strapi
+         fields: ['title', 'slug', 'publishedAt', 'publishedDate', 'excerpt'],
+      });
 
-   const dashboardQuery = qs.stringify({
-      locale,
-      sort: ['publishedAt:desc'],
-      pagination: { page: 1, pageSize: 9 },
-      populate: { cover: { fields: ['url', 'alternativeText'] }, category: { fields: ['name', 'slug', 'color'] } },
-   });
-
-   const [heroRes, dashboardRes] = await Promise.all([
-      fetchAPI(`/articles?${heroQuery}`),
-      fetchAPI(`/articles?${dashboardQuery}`)
-   ]);
-
-   return {
-      heroData: (heroRes?.data || []) as StrapiArticleItem[],
-      dashboardData: (dashboardRes?.data || []) as StrapiArticleItem[]
-   };
+      const res = await fetchAPI(`/articles?${query}`);
+      return res?.data || [];
+   } catch (error) {
+      console.error("Error fetching articles:", error);
+      return [];
+   }
 }
 
 export async function generateMetadata({ params }: Props) {
@@ -65,42 +43,52 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function NewsPage({ params }: Props) {
    const { locale } = await params;
-   const { heroData, dashboardData } = await getArticles(locale);
 
-   // Mapping Data Hero
-   const formattedHeroData: ArticleSlide[] = heroData.map((item) => ({
-      id: item.id,
-      title: item.title,
-      slug: item.slug,
-      publishedAt: item.publishedAt,
-      excerpt: item.description || item.excerpt,
-      cover: { url: item.cover?.url || item.cover?.data?.attributes?.url || "" },
-      category: item.category ? { name: item.category.name, color: item.category.color } : undefined
-   }));
+   // Ambil semua data mentah
+   const allArticles = await getArticles(locale);
 
-   // Mapping Data Dashboard
-   const formattedDashboardData: NewsItem[] = dashboardData.map((item) => ({
-      id: item.id,
-      title: item.title,
-      slug: item.slug,
-      publishedAt: item.publishedAt,
-      publishedDate: item.publishedDate,
-      excerpt: item.excerpt || item.description,
-      cover: { url: item.cover?.url || item.cover?.data?.attributes?.url || "" },
-      category: item.category ? { name: item.category.name, color: item.category.color } : undefined
-   }));
+   // --- 2. PEMISAHAN DATA ---
+   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   const normalizedArticles = allArticles.map((item: any) => {
+      const attributes = item.attributes || item;
+      const coverUrl = attributes.cover?.data?.attributes?.url || attributes.cover?.url || "";
+      const catData = attributes.category?.data?.attributes || attributes.category || null;
+
+      return {
+         id: item.id,
+         title: attributes.title,
+         slug: attributes.slug,
+         publishedAt: attributes.publishedDate || attributes.publishedAt || "",
+         // Cukup gunakan excerpt saja
+         excerpt: attributes.excerpt || "",
+         cover: { url: coverUrl },
+         category: catData ? { name: catData.name, color: catData.color } : undefined
+      };
+   });
+
+   // 5 Artikel Pertama masuk ke Hero Slider
+   const heroData: ArticleSlide[] = normalizedArticles.slice(0, 5);
+
+   // Sisanya masuk ke News Dashboard
+   const dashboardData: NewsItem[] = normalizedArticles.slice(5);
 
    return (
-      // PERBAIKAN POSISI:
-      // Sebelumnya: pt-24 md:pt-28 (terlalu jauh)
-      // Sekarang: pt-20 (Jarak standar minimal untuk Navbar Fixed 80px)
-      <main className="w-full bg-gray-50 min-h-screen pt-8">
+      <main className="w-full bg-gray-50 min-h-screen pt-24 pb-20">
 
          {/* Hero Slider */}
-         <NewsHeroSlider articles={formattedHeroData} />
+         {heroData.length > 0 && (
+            <div className="mb-12">
+               <NewsHeroSlider articles={heroData} />
+            </div>
+         )}
 
          {/* Dashboard Berita */}
-         <NewsDashboard initialData={formattedDashboardData} locale={locale} />
+         <NewsDashboard
+            initialData={dashboardData}
+            locale={locale}
+            isHomePage={false}
+         />
+
       </main>
    );
 }
