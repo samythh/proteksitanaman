@@ -9,7 +9,7 @@ type Props = {
    params: Promise<{ locale: string }>;
 };
 
-// --- 1. FETCH DATA (Diperbaiki) ---
+// --- 1. FETCH DATA ---
 async function getArticles(locale: string) {
    try {
       const query = qs.stringify({
@@ -17,13 +17,13 @@ async function getArticles(locale: string) {
          sort: ['publishedDate:desc', 'publishedAt:desc'],
          pagination: {
             page: 1,
-            pageSize: 14,
+            pageSize: 15, // Ambil cukup banyak data
          },
          populate: {
             cover: { fields: ['url', 'alternativeText'] },
             category: { fields: ['name', 'slug', 'color'] }
          },
-         // PERBAIKAN DISINI: Menghapus 'description' karena field itu tidak ada di Strapi
+         // Fields: excerpt saja, jangan description agar tidak error 400
          fields: ['title', 'slug', 'publishedAt', 'publishedDate', 'excerpt'],
       });
 
@@ -44,10 +44,8 @@ export async function generateMetadata({ params }: Props) {
 export default async function NewsPage({ params }: Props) {
    const { locale } = await params;
 
-   // Ambil semua data mentah
    const allArticles = await getArticles(locale);
 
-   // --- 2. PEMISAHAN DATA ---
    // eslint-disable-next-line @typescript-eslint/no-explicit-any
    const normalizedArticles = allArticles.map((item: any) => {
       const attributes = item.attributes || item;
@@ -59,18 +57,20 @@ export default async function NewsPage({ params }: Props) {
          title: attributes.title,
          slug: attributes.slug,
          publishedAt: attributes.publishedDate || attributes.publishedAt || "",
-         // Cukup gunakan excerpt saja
          excerpt: attributes.excerpt || "",
          cover: { url: coverUrl },
          category: catData ? { name: catData.name, color: catData.color } : undefined
       };
    });
 
-   // 5 Artikel Pertama masuk ke Hero Slider
+   // --- LOGIKA BARU ---
+
+   // 1. Hero Data: Ambil 5 teratas untuk Highlight
    const heroData: ArticleSlide[] = normalizedArticles.slice(0, 5);
 
-   // Sisanya masuk ke News Dashboard
-   const dashboardData: NewsItem[] = normalizedArticles.slice(5);
+   // 2. Dashboard Data: Ambil SEMUA data (Tidak di-slice/dipotong)
+   // Jadi berita yang ada di Hero akan muncul lagi di Dashboard
+   const dashboardData: NewsItem[] = normalizedArticles;
 
    return (
       <main className="w-full bg-gray-50 min-h-screen pt-24 pb-20">
