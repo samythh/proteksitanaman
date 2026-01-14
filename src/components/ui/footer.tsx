@@ -1,16 +1,35 @@
 // File: src/components/ui/footer.tsx
 import Image from "next/image";
-import { Mail, Phone, Instagram, Youtube, MapPin } from "lucide-react";
+import {
+   Mail,
+   Phone,
+   MapPin,
+   Instagram,
+   Youtube,
+   Facebook,
+   Twitter,
+   Linkedin,
+   Globe,
+   Video
+} from "lucide-react";
 import { fetchAPI } from "@/lib/strapi/fetcher";
 import { getStrapiMedia } from "@/lib/strapi/utils";
 
 // --- 1. DEFINISI TIPE DATA ---
+
+// Tipe data untuk item sosmed dinamis
+interface SocialLinkItem {
+   id: number;
+   platform: "Instagram" | "Youtube" | "Facebook" | "Twitter" | "Tiktok" | "Linkedin" | "Website";
+   url: string;
+}
+
 interface FooterAttributes {
    address: string;
    email: string;
    phone: string;
-   instagram: string;
-   youtube: string;
+   // Field baru: social_links (Repeatable Component)
+   social_links: SocialLinkItem[];
    mapEmbedUrl: string;
    copyright: string;
    background?: {
@@ -27,6 +46,40 @@ interface FooterAttributes {
    }[];
 }
 
+// --- KAMUS BAHASA UNTUK TEKS STATIS ---
+const FOOTER_TRANSLATIONS = {
+   id: {
+      address: "ALAMAT KAMI",
+      contact: "KONTAK & SOSMED",
+      location: "LOKASI KAMI",
+      no_map: "URL Peta belum diatur"
+   },
+   en: {
+      address: "OUR ADDRESS",
+      contact: "CONTACT & SOCIALS",
+      location: "OUR LOCATION",
+      no_map: "Map URL not set"
+   }
+};
+
+// --- HELPER: ICON MAPPER ---
+// Fungsi untuk memilih icon berdasarkan value dropdown Strapi
+const getSocialIcon = (platform: string) => {
+   // Ubah ke lowercase agar tidak sensitif huruf besar/kecil
+   const p = platform.toLowerCase();
+
+   switch (p) {
+      case 'instagram': return <Instagram className="w-6 h-6" />;
+      case 'youtube': return <Youtube className="w-6 h-6" />;
+      case 'facebook': return <Facebook className="w-6 h-6" />;
+      case 'twitter': return <Twitter className="w-6 h-6" />;
+      case 'linkedin': return <Linkedin className="w-6 h-6" />;
+      case 'tiktok': return <Video className="w-6 h-6" />; // Lucide tidak punya icon Tiktok spesifik, pakai Video atau import icon luar
+      case 'website': return <Globe className="w-6 h-6" />;
+      default: return <Globe className="w-6 h-6" />; // Default icon
+   }
+};
+
 // --- 2. LOGIKA FETCHER ---
 async function getFooterData(locale: string) {
    try {
@@ -35,6 +88,8 @@ async function getFooterData(locale: string) {
          locale: locale,
          populate: {
             background: true,
+            // Populate field social_links yang baru dibuat
+            social_links: true,
             partners: {
                populate: { image: true }
             }
@@ -64,12 +119,16 @@ interface FooterProps {
 export default async function Footer({ locale }: FooterProps) {
    const data = await getFooterData(locale);
 
+   // Pilih teks berdasarkan locale, fallback ke 'id' jika tidak ada
+   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   const t = (FOOTER_TRANSLATIONS as any)[locale] || FOOTER_TRANSLATIONS.id;
+
    const footer = {
-      address: data?.address || "Alamat Departemen belum diatur di Strapi.",
+      address: data?.address || "Alamat belum diatur.",
       email: data?.email || "email@unand.ac.id",
       phone: data?.phone || "-",
-      instagram: data?.instagram || "#",
-      youtube: data?.youtube || "#",
+      // Ambil array social_links, default array kosong jika null
+      socialLinks: data?.social_links || [],
       mapUrl: extractSrcFromIframe(data?.mapEmbedUrl),
       copyright: data?.copyright || `© ${new Date().getFullYear()} Departemen Proteksi Tanaman`,
       bgUrl: getStrapiMedia(data?.background?.url || null),
@@ -86,9 +145,9 @@ export default async function Footer({ locale }: FooterProps) {
                {/* KOLOM 1: Alamat & Identitas Institusi */}
                <div className="space-y-6 text-center md:text-left">
                   <div>
-                     {/* PERBAIKAN: Judul Diubah menjadi "ALAMAT KAMI" */}
+                     {/* JUDUL DINAMIS BERDASARKAN BAHASA */}
                      <h3 className="font-bold text-lg mb-4 text-white uppercase tracking-wider border-b border-white/20 pb-2 inline-block md:block">
-                        ALAMAT KAMI
+                        {t.address}
                      </h3>
 
                      <div className="flex flex-col md:flex-row items-center md:items-start gap-3 text-sm text-gray-100 leading-relaxed font-medium">
@@ -97,7 +156,7 @@ export default async function Footer({ locale }: FooterProps) {
                      </div>
                   </div>
 
-                  {/* Area Logo (Diktisaintek, Unand, dll) */}
+                  {/* Area Logo Partner */}
                   {footer.partners.length > 0 && (
                      <div className="pt-2">
                         <div className="flex flex-col items-center md:items-start gap-4">
@@ -125,31 +184,32 @@ export default async function Footer({ locale }: FooterProps) {
                {/* KOLOM 2: Sosmed & Kontak (CENTER) */}
                <div className="flex flex-col space-y-8 items-center text-center">
                   <div className="w-full">
+                     {/* JUDUL DINAMIS */}
                      <h3 className="font-bold text-lg mb-4 text-white uppercase tracking-wider border-b border-white/20 pb-2 inline-block">
-                        KONTAK & SOSMED
+                        {t.contact}
                      </h3>
 
-                     {/* Social Media Buttons */}
-                     <div className="flex justify-center gap-4 mb-6">
-                        <a
-                           href={footer.instagram}
-                           target="_blank"
-                           rel="noopener noreferrer"
-                           className="bg-white/10 p-3 rounded-full hover:bg-yellow-400 hover:text-[#005700] transition-all group shadow-lg"
-                           aria-label="Instagram"
-                        >
-                           <Instagram className="w-6 h-6 text-white group-hover:text-[#005700]" />
-                        </a>
-                        <a
-                           href={footer.youtube}
-                           target="_blank"
-                           rel="noopener noreferrer"
-                           className="bg-white/10 p-3 rounded-full hover:bg-yellow-400 hover:text-[#005700] transition-all group shadow-lg"
-                           aria-label="Youtube"
-                        >
-                           <Youtube className="w-6 h-6 text-white group-hover:text-[#005700]" />
-                        </a>
-                     </div>
+                     {/* Social Media Buttons - LOOPING DINAMIS */}
+                     {footer.socialLinks.length > 0 ? (
+                        <div className="flex justify-center gap-4 mb-6 flex-wrap">
+                           {footer.socialLinks.map((item) => (
+                              <a
+                                 key={item.id}
+                                 href={item.url}
+                                 target="_blank"
+                                 rel="noopener noreferrer"
+                                 className="bg-white/10 p-3 rounded-full hover:bg-yellow-400 hover:text-[#005700] transition-all group shadow-lg text-white"
+                                 aria-label={item.platform}
+                                 title={item.platform}
+                              >
+                                 {/* Render Icon Sesuai Platform */}
+                                 {getSocialIcon(item.platform)}
+                              </a>
+                           ))}
+                        </div>
+                     ) : (
+                        <p className="text-xs text-gray-300 mb-6">Sosmed belum ditambahkan</p>
+                     )}
 
                      {/* Contact Info */}
                      <ul className="space-y-4 text-sm flex flex-col items-center">
@@ -169,8 +229,9 @@ export default async function Footer({ locale }: FooterProps) {
 
                {/* KOLOM 3: Peta */}
                <div className="flex flex-col items-center md:items-end text-center md:text-right">
+                  {/* JUDUL DINAMIS */}
                   <h3 className="font-bold text-lg mb-4 text-white uppercase tracking-wider border-b border-white/20 pb-2 inline-block md:block">
-                     LOKASI KAMI
+                     {t.location}
                   </h3>
 
                   <div className="w-full max-w-[280px] h-56 bg-gray-200 rounded-lg overflow-hidden shadow-lg border-2 border-white/20 relative group">
@@ -187,7 +248,7 @@ export default async function Footer({ locale }: FooterProps) {
                         ></iframe>
                      ) : (
                         <div className="flex items-center justify-center h-full bg-gray-800 text-gray-400 text-xs px-4">
-                           Map Embed URL belum diisi di Strapi
+                           {t.no_map}
                         </div>
                      )}
                   </div>
@@ -202,7 +263,7 @@ export default async function Footer({ locale }: FooterProps) {
             </p>
          </div>
 
-         {/* Background Image Paling Bawah (Kecil: h-12) */}
+         {/* Background Image */}
          {footer.bgUrl && (
             <div className="w-full h-12 relative bg-white z-10">
                <Image
