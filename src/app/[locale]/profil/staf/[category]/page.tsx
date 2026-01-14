@@ -62,9 +62,13 @@ export default async function StaffPage({
 
   const staffList: Staff[] = staffData?.data || [];
 
-  // Ambil URL Banner jika ada
-  const globalBannerUrl =
-    globalConfig?.data?.attributes?.Default_Card_Banner?.data?.attributes?.url;
+  const attrs = globalConfig?.data?.attributes;
+
+  // Cek kedua kemungkinan nama field (Huruf Besar atau Kecil)
+  const bannerData =
+    attrs?.Default_Card_Banner?.data || attrs?.default_card_banner?.data;
+
+  const globalBannerUrl = bannerData?.attributes?.url;
 
   const title = formatTitle(category);
 
