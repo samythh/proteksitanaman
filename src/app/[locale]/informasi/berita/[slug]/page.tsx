@@ -2,14 +2,15 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Calendar, ChevronRight } from "lucide-react"; // Share2 dihapus, dipindah ke component baru
+import { Calendar, ChevronRight } from "lucide-react";
 import qs from "qs";
 import { fetchAPI } from "@/lib/strapi/fetcher";
 import { getStrapiMedia } from "@/lib/strapi/utils";
 import { BlocksRenderer, type BlocksContent } from "@strapi/blocks-react-renderer";
 
-// PERBAIKAN 1: Import Client Component ShareButton
 import ShareButton from "@/components/ui/ShareButton";
+// --- PERBAIKAN 1: Import Component Gambar Baru ---
+import NewsCoverImage from "@/components/ui/NewsCoverImage";
 
 // --- KAMUS TERJEMAHAN (DICTIONARY) ---
 const DICTIONARY = {
@@ -41,7 +42,6 @@ const CATEGORY_COLORS: Record<string, string> = {
    "Green-Default": "#005320"
 };
 
-// --- TYPES (TETAP SAMA) ---
 interface ArticleDetail {
    id: number;
    title: string;
@@ -73,10 +73,9 @@ interface PageProps {
    params: Promise<{ locale: string; slug: string }>;
 }
 
-// --- FETCHING DATA (TETAP SAMA) ---
 async function getArticleBySlug(slug: string, locale: string) {
    const query = qs.stringify({
-      locale, // Strapi otomatis ambil konten bahasa yang diminta
+      locale,
       filters: { slug: { $eq: slug } },
       fields: ["title", "content", "publishedAt", "publishedDate", "author"],
       populate: {
@@ -121,7 +120,6 @@ async function getRelatedArticles(locale: string, currentId: number) {
    return res?.data || [];
 }
 
-// Format tanggal juga perlu menyesuaikan bahasa
 const formatDate = (dateString: string, locale: string) => {
    if (!dateString) return "-";
    return new Date(dateString).toLocaleDateString(locale === 'en' ? 'en-US' : 'id-ID', {
@@ -139,17 +137,14 @@ const getTextColor = (colorName: string | undefined) => {
 // --- COMPONENT UTAMA ---
 export default async function BeritaDetailPage({ params }: PageProps) {
    const { locale, slug } = await params;
-
-   // PERBAIKAN 2: Tentukan bahasa aktif (default ke 'id' jika aneh)
    const lang = (locale === 'en' ? 'en' : 'id');
-   const t = DICTIONARY[lang]; // 't' berisi teks terjemahan
+   const t = DICTIONARY[lang];
 
    const article = await getArticleBySlug(slug, locale);
    if (!article) return notFound();
 
    const relatedArticles = await getRelatedArticles(locale, article.id);
 
-   // Gunakan fallback author sesuai bahasa
    const authorName = article.author || t.defaultAuthor;
    const coverUrl = getStrapiMedia(article.cover.url);
 
@@ -164,15 +159,19 @@ export default async function BeritaDetailPage({ params }: PageProps) {
                <div className="flex flex-wrap items-center text-sm md:text-base text-gray-500 gap-2 mb-4">
                   <span className="font-semibold text-gray-700">{authorName}</span>
                   <span className="text-gray-300">|</span>
-                  {/* Pass locale ke formatter tanggal */}
                   <span>{formatDate(article.publishedAt, lang)}</span>
                </div>
                <div className="w-16 h-1 bg-[#005320] rounded-full"></div>
             </header>
 
             {coverUrl && (
+               // --- PERBAIKAN 2: Menggunakan Component Client Baru ---
+               // Class relative, h-[...], rounded, dll tetap di parent agar layout tidak berubah
                <div className="relative w-full h-[300px] md:h-[500px] mb-8 rounded-xl overflow-hidden shadow-lg">
-                  <Image src={coverUrl} alt={article.title} fill className="object-cover" />
+                  <NewsCoverImage
+                     src={coverUrl}
+                     alt={article.title}
+                  />
                </div>
             )}
 
@@ -182,7 +181,6 @@ export default async function BeritaDetailPage({ params }: PageProps) {
 
             {/* SHARE SECTION */}
             <div className="border-t border-gray-200 pt-4 mb-16 flex flex-col md:flex-row justify-end items-center gap-2">
-               {/* PERBAIKAN 3: Gunakan Component ShareButton & Label Dinamis */}
                <ShareButton label={t.shareLabel} />
             </div>
          </article>
@@ -190,7 +188,7 @@ export default async function BeritaDetailPage({ params }: PageProps) {
          {/* BERITA LAINNYA */}
          <div className="container mx-auto px-4 max-w-6xl mt-12">
             <h3 className="text-3xl font-bold text-gray-900 mb-8">
-               {t.relatedNews} {/* Teks Dinamis */}
+               {t.relatedNews}
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
@@ -239,7 +237,7 @@ export default async function BeritaDetailPage({ params }: PageProps) {
                   href={`/${locale}/informasi/berita`}
                   className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#005320] text-white rounded-full hover:bg-yellow-400 hover:text-[#005320] transition-all font-semibold text-sm shadow-md"
                >
-                  {t.loadMore} {/* Teks Dinamis */}
+                  {t.loadMore}
                   <ChevronRight className="w-4 h-4" />
                </Link>
             </div>

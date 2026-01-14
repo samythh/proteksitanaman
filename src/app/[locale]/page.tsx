@@ -30,8 +30,53 @@ async function getHomePageData(locale: string) {
             // Accreditation Section
             'sections.accreditation': { populate: { certificates: { populate: { image: { fields: ['url'] } } } } },
 
+            // --- PARTNERSHIP SECTION ---
+            'sections.partnership': {
+              populate: {
+                items: {
+                  populate: {
+                    logo: {
+                      fields: ['url', 'alternativeText']
+                    }
+                  }
+                }
+              }
+            },
+
+            // --- VISITOR STATS (UPDATE: Background Pattern) ---
+            'sections.visitor-stats': {
+              populate: {
+                // Ambil field background_pattern agar gambar dinamis muncul
+                background_pattern: {
+                  fields: ['url', 'alternativeText']
+                }
+              }
+            },
+            // ------------------------------------------------
+
+            // --- OTHER LINK SECTION ---
+            'sections.other-link-section': {
+              populate: {
+                items: {
+                  populate: {
+                    image: {
+                      fields: ['url', 'alternativeText']
+                    }
+                  }
+                }
+              }
+            },
+
+            // --- FAQ SECTION ---
+            'sections.faq-section': {
+              populate: {
+                items: {
+                  populate: '*' // Ambil semua field text (question & answer)
+                }
+              }
+            },
+
             // --- NEWS SECTION (TRIGGER) ---
-            // Kita hanya perlu tahu kalau komponen ini ada di list blocks
             'sections.news-section': { populate: true }
           }
         }
@@ -82,7 +127,6 @@ export default async function HomePage({ params }: Props) {
   const { locale } = await params;
 
   // --- 3. FETCH PARALEL (HOMEPAGE + ARTIKEL) ---
-  // Promise.all memastikan kedua request jalan berbarengan (lebih cepat)
   const [strapiData, rawArticles] = await Promise.all([
     getHomePageData(locale),
     getLatestArticles(locale)
@@ -92,13 +136,12 @@ export default async function HomePage({ params }: Props) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const blocks = (strapiData as any)?.blocks || (strapiData as any)?.attributes?.blocks || [];
 
-  // Normalisasi Data Artikel (Mapping ke format yang dimengerti NewsDashboard)
+  // Normalisasi Data Artikel
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const formattedArticles = rawArticles.map((item: any) => ({
     id: item.id,
     title: item.title,
     slug: item.slug,
-    // Gunakan publishedDate jika ada, kalau tidak pakai publishedAt system
     publishedAt: item.publishedDate || item.publishedAt,
     excerpt: item.excerpt,
     cover: { url: item.cover?.url || "" },
@@ -114,7 +157,6 @@ export default async function HomePage({ params }: Props) {
       )}
 
       {/* --- 4. KIRIM DATA KE RENDERER --- */}
-      {/* Kita kirim 'globalData' berisi artikel dan locale */}
       <SectionRenderer
         sections={blocks}
         globalData={{

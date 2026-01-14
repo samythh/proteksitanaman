@@ -2,7 +2,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-// Utilities
 import { getStrapiMedia } from "@/lib/strapi/utils";
 
 // Components Imports
@@ -13,14 +12,16 @@ import WelcomeSection, { WelcomeProfileData } from "@/components/sections/Welcom
 import StatsSection, { StatItemData } from "@/components/sections/StatsSection";
 import AccreditationSection, { CertificateItemData } from "@/components/sections/AccreditationSection";
 import NewsDashboard, { NewsItem } from "@/components/sections/NewsDashboard";
+import PartnershipSection, { PartnerItemData } from "@/components/sections/PartnershipSection";
+import VisitorStats from "@/components/sections/VisitorStats";
+import OtherLinkSection, { LinkItemData } from "@/components/sections/OtherLinkSection";
+import FAQSection from "@/components/sections/FAQSection";
 
-// --- Interface untuk Props Global ---
 interface GlobalData {
    articles?: NewsItem[];
    locale?: string;
 }
 
-// Props untuk Component Renderer
 interface SectionRendererProps {
    sections: any[];
    globalData?: GlobalData;
@@ -37,15 +38,12 @@ export default function SectionRenderer({
 
       switch (section.__component) {
 
-         // 1. Hero Slider
          case "sections.hero-slider":
             return <HeroSlider key={index} data={section} />;
 
-         // 2. Quick Access
          case "sections.quick-access":
             return <QuickAccess key={index} data={section} />;
 
-         // 3. Video Profile
          case "sections.video-profile":
             const videoSlides: VideoSlide[] = section.slides.map((item: any) => ({
                id: item.id,
@@ -57,7 +55,6 @@ export default function SectionRenderer({
             }));
             return <VideoProfile key={index} data={videoSlides} />;
 
-         // 4. Welcome Section
          case "sections.welcome-section":
             const welcomeProfiles: WelcomeProfileData[] = section.profiles.map((item: any) => ({
                id: item.id,
@@ -68,7 +65,6 @@ export default function SectionRenderer({
             }));
             return <WelcomeSection key={index} data={welcomeProfiles} />;
 
-         // 5. Stats Section
          case "sections.stats":
             const statsData: StatItemData[] = section.items.map((item: any) => ({
                id: item.id,
@@ -78,7 +74,6 @@ export default function SectionRenderer({
             }));
             return <StatsSection key={index} data={statsData} />;
 
-         // 6. Accreditation Section
          case "sections.accreditation":
             const certData: CertificateItemData[] = section.certificates.map((item: any) => ({
                id: item.id,
@@ -87,17 +82,57 @@ export default function SectionRenderer({
             }));
             return <AccreditationSection key={index} title={section.title} data={certData} />;
 
-         // 7. NEWS DASHBOARD (TRIGGER)
          case "sections.news-section":
             return (
                <NewsDashboard
                   key={index}
                   initialData={globalData?.articles || []}
                   locale={globalData?.locale || "id"}
-                  // Mengaktifkan mode Homepage (menyembunyikan Load More, memunculkan Link Selengkapnya)
                   isHomePage={true}
                />
             );
+
+         case "sections.partnership":
+            const partnershipData: PartnerItemData[] = (section.items || []).map((item: any) => ({
+               id: item.id,
+               name: item.name,
+               logoUrl: getStrapiMedia(item.logo?.url) || ""
+            }));
+            return (
+               <PartnershipSection
+                  key={index}
+                  title={section.title}
+                  data={partnershipData}
+               />
+            );
+
+         // --- VISITOR STATS (UPDATE: Mapping Background Image) ---
+         case "sections.visitor-stats":
+            // Kita inject properti backgroundPatternUrl ke dalam data yang dikirim ke komponen
+            const visitorStatsData = {
+               ...section,
+               // Mengambil URL dari object media Strapi
+               backgroundPatternUrl: getStrapiMedia(section.background_pattern?.url) || ""
+            };
+            return <VisitorStats key={index} data={visitorStatsData} />;
+
+         case "sections.other-link-section":
+            const linkData: LinkItemData[] = (section.items || []).map((item: any) => ({
+               id: item.id,
+               title: item.title,
+               url: item.url,
+               imageUrl: getStrapiMedia(item.image?.url) || ""
+            }));
+            return (
+               <OtherLinkSection
+                  key={index}
+                  title={section.title}
+                  data={linkData}
+               />
+            );
+
+         case "sections.faq-section":
+            return <FAQSection key={index} data={section} />;
 
          default:
             console.warn(`Komponen Strapi tidak dikenal: ${section.__component}`);
