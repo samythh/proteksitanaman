@@ -3,9 +3,12 @@ export interface Staff {
   attributes: {
     name: string;
     nip: string;
-    expertise?: string; // Untuk Dosen
-    position?: string; // Untuk Tendik
+    slug: string;
+    expertise?: string;
+    position?: string;
     category: "akademik" | "administrasi";
+    email?: string;
+    education?: string;
     photo: {
       data: {
         attributes: {
@@ -13,7 +16,6 @@ export interface Staff {
         };
       };
     };
-    // Social Links
     sinta_url?: string;
     scopus_url?: string;
     google_scholar_url?: string;

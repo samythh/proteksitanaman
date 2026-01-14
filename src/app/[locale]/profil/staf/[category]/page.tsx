@@ -12,22 +12,35 @@ function formatTitle(slug: string) {
 }
 
 export async function generateStaticParams() {
-  // Kita harus memberi tahu Next.js kombinasi apa saja yang mungkin terjadi
-  // Kombinasi Bahasa (id/en) + Kategori (akademik/administrasi)
-
   const params = [];
+
+  // Ambil semua data staff, minta field slug dan category saja agar ringan
+  const staffData = await fetchAPI("/staff-members", {
+    fields: ["slug", "category"],
+    pagination: { limit: -1 }, // Ambil semua data (unlimited)
+  });
+
   const locales = ["id", "en"];
-  const categories = ["akademik", "administrasi"];
+
+  if (!staffData?.data) return [];
 
   for (const locale of locales) {
-    for (const category of categories) {
-      params.push({
-        locale: locale,
-        category: category,
-      });
+    for (const staff of staffData.data) {
+      // 🔥 PERBAIKAN: Safety Check (Flat vs Nested)
+      // Cek apakah data dibungkus 'attributes' atau langsung datar
+      // "as any" digunakan sebentar untuk bypass cek TypeScript yang ketat
+      const attributes = (staff as any).attributes || staff;
+
+      // Gunakan variabel 'attributes' yang sudah aman
+      if (attributes.slug && attributes.category) {
+        params.push({
+          locale,
+          category: attributes.category,
+          slug: attributes.slug,
+        });
+      }
     }
   }
-
   return params;
 }
 
@@ -43,7 +56,7 @@ export default async function StaffPage({
     return notFound();
   }
 
-  // 🔥 FETCH PARALEL (Ambil Data Staff & Config Banner sekaligus)
+  //  FETCH PARALEL (Ambil Data Staff & Config Banner sekaligus)
   const [staffData, globalConfig] = await Promise.all([
     // 1. Ambil List Staf sesuai kategori
     fetchAPI("/staff-members", {
@@ -113,6 +126,7 @@ export default async function StaffPage({
                   key={staff.id}
                   data={staff}
                   globalBannerUrl={globalBannerUrl} // Oper URL Banner
+                  locale={locale}
                 />
               ))}
             </div>
