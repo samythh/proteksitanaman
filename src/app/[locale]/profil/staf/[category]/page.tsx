@@ -11,6 +11,26 @@ function formatTitle(slug: string) {
   return slug;
 }
 
+export async function generateStaticParams() {
+  // Kita harus memberi tahu Next.js kombinasi apa saja yang mungkin terjadi
+  // Kombinasi Bahasa (id/en) + Kategori (akademik/administrasi)
+
+  const params = [];
+  const locales = ["id", "en"];
+  const categories = ["akademik", "administrasi"];
+
+  for (const locale of locales) {
+    for (const category of categories) {
+      params.push({
+        locale: locale,
+        category: category,
+      });
+    }
+  }
+
+  return params;
+}
+
 export default async function StaffPage({
   params,
 }: {
