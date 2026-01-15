@@ -5,15 +5,19 @@ import Image from "next/image";
 import Link from "next/link";
 import { fetchAPI } from "@/lib/strapi/fetcher";
 import { getStrapiMedia } from "@/lib/strapi/utils";
-import AgendaCard from "@/components/features/AgendaCard"; // Reuse kartu yang sudah ada
+import AgendaCard from "@/components/features/AgendaCard";
 import ShareButton from "@/components/features/ShareButton";
-import PageHeader from "@/components/ui/PageHeader"; // Optional, jika ingin header kecil di atas
 import { BlocksRenderer } from "@strapi/blocks-react-renderer";
 
 // Icons
-import { FaCalendarAlt, FaMapMarkerAlt, FaTag } from "react-icons/fa";
+import {
+  FaCalendarAlt,
+  FaMapMarkerAlt,
+  FaTag,
+  FaArrowLeft,
+} from "react-icons/fa";
 
-// 1. GENERATE STATIC PARAMS (Agar halaman cepat & SEO bagus)
+// 1. GENERATE STATIC PARAMS
 export async function generateStaticParams() {
   const events = await fetchAPI("/events", {
     fields: ["slug"],
@@ -22,7 +26,6 @@ export async function generateStaticParams() {
 
   if (!events?.data) return [];
 
-  // Kita generate untuk locale 'id' dan 'en'
   const params = [];
   for (const item of events.data) {
     const attr = item.attributes || item;
@@ -41,21 +44,27 @@ export default async function AgendaDetailPage({
 }) {
   const { slug, locale } = await params;
 
-  // 2. FETCH DATA (Detail Agenda + Agenda Lainnya)
+  // 2. FETCH DATA
   const [detailRes, relatedRes] = await Promise.all([
     // A. Fetch Detail Acara
     fetchAPI("/events", {
       filters: { slug: { $eq: slug } },
-      populate: ["image"], // Pastikan image dipopulate
+      populate: {
+        image: { fields: ["url"] },
+        tags: { populate: "*" }, // Ambil data tags
+      },
       locale: locale,
     }),
 
-    // B. Fetch Agenda Lainnya (Related) - Kecuali yang sedang dibuka
+    // B. Fetch Agenda Lainnya
     fetchAPI("/events", {
-      filters: { slug: { $ne: slug } }, // Exclude current slug
-      populate: ["image"],
+      filters: { slug: { $ne: slug } },
+      populate: {
+        image: { fields: ["url"] },
+        tags: { populate: "*" },
+      },
       sort: ["startDate:desc"],
-      pagination: { limit: 4 }, // Ambil 4 berita lain
+      pagination: { limit: 4 },
       locale: locale,
     }),
   ]);
@@ -67,124 +76,174 @@ export default async function AgendaDetailPage({
     return notFound();
   }
 
-  // Support v4/v5 Attributes
+  // Ekstraksi Data
   const attr = (event as any).attributes || event;
-  const { title, content, startDate, endDate, location, image } = attr;
+  const { title, content, startDate, endDate, location, image, tags } = attr;
 
   // Image Helper
   const imgUrl = getStrapiMedia(image?.data?.attributes?.url || image?.url);
 
-  // Date Formatter Helper
+  // Date Helper
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString(
       locale === "id" ? "id-ID" : "en-US",
-      {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      }
+      { day: "numeric", month: "long", year: "numeric" }
     );
   };
 
+  const startStr = formatDate(startDate);
+  const endStr = formatDate(endDate);
+  const dateDisplay =
+    startStr === endStr ? startStr : `${startStr} - ${endStr}`;
+
+  // Tags Helper
+  const tagsList = tags?.data || [];
+
   return (
-    <div className="bg-white min-h-screen pb-20 -m-3">
-      {/* Optional: Breadcrumb Header Kecil */}
-      <div className="bg-gray-900 py-20 text-center text-white">
-        <div className="container mx-auto px-4">
-          <p className="text-sm opacity-80 uppercase tracking-wider mb-2">
+    <div className="bg-gray-50 min-h-screen pb-20">
+      {/* 1. HEADER SIMPLE (Breadcrumb) */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-30">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <Link
+            href={`/${locale}/informasi/agenda`}
+            className="text-sm font-medium text-gray-500 hover:text-green-600 flex items-center gap-2 transition-colors"
+          >
+            <FaArrowLeft />
+            {locale === "en" ? "Back to Agenda" : "Kembali ke Agenda"}
+          </Link>
+          <p className="text-xs text-gray-400 uppercase tracking-wider hidden md:block">
             Informasi / Agenda / Detail
           </p>
         </div>
       </div>
 
-      {/* CONTAINER UTAMA */}
-      <div className="container mx-auto px-4 mt-4 relative z-10">
-        <div className="max-w-4xl mx-auto bg-white p-6 md:p-10 rounded-xl shadow-xl border border-gray-300">
-          {/* 1. HEADER ACARA */}
-          <div className="mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 leading-tight">
+      {/* 2. KONTEN UTAMA (Layout Grid) */}
+      <div className="container mx-auto px-4 py-12">
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden">
+          {/* Header Judul (Di dalam Card) */}
+          <div className="p-6 md:p-12 border-b border-gray-100 text-center">
+            {/* Tags Badge */}
+            <div className="flex flex-wrap justify-center gap-2 mb-6">
+              {tagsList.length > 0 ? (
+                tagsList.map((tag: any) => (
+                  <span
+                    key={tag.id}
+                    className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider"
+                  >
+                    {tag.attributes ? tag.attributes.name : tag.name}
+                  </span>
+                ))
+              ) : (
+                <span className="bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+                  Agenda
+                </span>
+              )}
+            </div>
+
+            <h1 className="text-3xl md:text-5xl font-extrabold text-gray-900 leading-tight max-w-4xl mx-auto mb-6">
               {title}
             </h1>
 
-            {/* Meta Data (Tanggal & Lokasi) */}
-            <div className="flex flex-wrap gap-4 md:gap-8 text-sm md:text-base text-gray-600 border-b border-gray-100 pb-6">
-              <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-lg">
+            {/* Info Bar (Date & Location) */}
+            <div className="inline-flex flex-col md:flex-row items-center gap-4 md:gap-8 text-gray-500 bg-gray-50 px-6 py-3 rounded-xl border border-gray-100">
+              <div className="flex items-center gap-2">
                 <FaCalendarAlt className="text-green-600" />
-                <span className="font-medium">
-                  {formatDate(startDate)} - {formatDate(endDate)}
+                <span className="font-medium text-sm md:text-base">
+                  {dateDisplay}
                 </span>
               </div>
-
               {location && (
-                <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-lg">
-                  <FaMapMarkerAlt className="text-orange-500" />
-                  <span className="font-medium">{location}</span>
-                </div>
+                <>
+                  <div className="hidden md:block w-px h-4 bg-gray-300"></div>
+                  <div className="flex items-center gap-2">
+                    <FaMapMarkerAlt className="text-red-500" />
+                    <span className="font-medium text-sm md:text-base">
+                      {location}
+                    </span>
+                  </div>
+                </>
               )}
+            </div>
+          </div>
 
-              {/* Tags Mockup (Bisa diambil dari Strapi jika ada relation tags) */}
-              <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg">
-                <FaTag />
-                <span className="font-medium">Seminar</span>
+          {/* Content Body (Grid Layout: Kiri Poster, Kanan Teks) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
+            {/* KOLOM KIRI: POSTER IMAGE (Sticky pada Desktop) */}
+            <div className="lg:col-span-5 bg-gray-100 p-6 md:p-10 flex items-start justify-center border-r border-gray-100">
+              <div className="relative w-full aspect-[3/4] max-w-md shadow-lg rounded-2xl overflow-hidden sticky top-24">
+                {imgUrl ? (
+                  <Image
+                    src={imgUrl}
+                    alt={title}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 40vw"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-200">
+                    No Poster Available
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* KOLOM KANAN: DESCRIPTION TEXT */}
+            <div className="lg:col-span-7 p-6 md:p-12">
+              <div className="prose prose-lg prose-green max-w-none text-gray-700 leading-relaxed">
+                {content ? (
+                  <BlocksRenderer content={content} />
+                ) : (
+                  <p className="text-gray-400 italic text-center py-10">
+                    Tidak ada deskripsi detail untuk acara ini.
+                  </p>
+                )}
+              </div>
+
+              {/* Share Section */}
+              <div className="mt-12 pt-8 border-t border-gray-100">
+                <ShareButton title={title} slug={slug} />
               </div>
             </div>
           </div>
-
-          {/* 2. FEATURED IMAGE (POSTER) */}
-          {imgUrl && (
-            <div className="relative w-full h-[400px] md:h-[500px] rounded-xl overflow-hidden mb-10 shadow-sm bg-gray-100">
-              <Image
-                src={imgUrl}
-                alt={title}
-                fill
-                className="object-contain" // Gunakan contain agar poster full terlihat tidak terpotong
-              />
-            </div>
-          )}
-
-          {/* 3. KONTEN ARTIKEL (Rich Text) */}
-          <div className="prose prose-lg prose-green max-w-none text-gray-700 leading-relaxed mb-10">
-            {content ? (
-              // Gunakan BlocksRenderer untuk Strapi v5 Blocks
-              <BlocksRenderer content={content} />
-            ) : (
-              <p className="text-gray-400 italic">
-                Tidak ada deskripsi detail untuk acara ini.
-              </p>
-            )}
-          </div>
-
-          {/* 4. SHARE BUTTON */}
-          <ShareButton title={title} slug={slug} />
         </div>
       </div>
 
-      {/* 5. AGENDA LAINNYA (RELATED EVENTS) */}
-      <div className="container mx-auto px-4 mt-16 max-w-6xl">
-        <div className="flex items-center gap-4 mb-8">
-          <div className="h-8 w-1 bg-green-600 rounded-full"></div>
-          <h2 className="text-2xl font-bold text-gray-900">Agenda Lainnya</h2>
+      {/* 3. AGENDA LAINNYA */}
+      <div className="container mx-auto px-4 mt-8 mb-20">
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+            <span className="w-2 h-8 bg-green-600 rounded-full"></span>
+            Agenda Lainnya
+          </h2>
+          <Link
+            href={`/${locale}/informasi/agenda`}
+            className="hidden md:flex items-center gap-2 text-sm font-bold text-green-700 hover:text-green-800 transition-colors"
+          >
+            Lihat Semua <FaArrowLeft className="rotate-180" />
+          </Link>
         </div>
 
         {relatedEvents.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {relatedEvents.map((item: any) => (
               <AgendaCard key={item.id} data={item} locale={locale} />
             ))}
           </div>
         ) : (
-          <p className="text-gray-500 italic">
-            Belum ada agenda lain saat ini.
-          </p>
+          <div className="bg-white rounded-xl p-8 text-center border border-dashed border-gray-300">
+            <p className="text-gray-500 italic">
+              Belum ada agenda lain saat ini.
+            </p>
+          </div>
         )}
 
-        {/* Tombol Lihat Semua */}
-        <div className="text-right mt-6">
+        {/* Mobile View All Button */}
+        <div className="mt-8 text-center md:hidden">
           <Link
             href={`/${locale}/informasi/agenda`}
-            className="inline-flex items-center text-green-700 font-semibold hover:underline"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 rounded-full text-sm font-bold text-gray-700 shadow-sm"
           >
-            Lihat Semua Agenda &rarr;
+            Lihat Semua Agenda <FaArrowLeft className="rotate-180" />
           </Link>
         </div>
       </div>
