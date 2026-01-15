@@ -82,10 +82,18 @@ export default function AgendaHeroSlider({
                     src={imgUrl}
                     alt={title}
                     fill
+                    // UPDATE 1: Tambahkan quality={10} (Sangat rendah karena akan diblur)
+                    quality={50}
+                    // UPDATE 2: Pastikan sizes 100vw
+                    sizes="100vw"
                     className="object-cover filter blur-xl scale-110 opacity-50"
+                    // UPDATE 3: Priority HANYA untuk slide pertama (index 0)
                     priority={index === 0}
+
+                    // (Opsional) Tambahkan fetchPriority jika Next.js versi terbaru mendukung
+                    // fetchPriority={index === 0 ? "high" : "auto"}
                   />
-                  <div className="absolute inset-0 bg-black/60" />
+                  <div className="absolute inset-0 bg-black/30" />
                 </div>
               )}
 
@@ -128,6 +136,7 @@ export default function AgendaHeroSlider({
                         fill
                         className="object-cover"
                         sizes="(max-width: 768px) 100vw, 50vw"
+                        priority={index === 0}
                       />
                     ) : (
                       <div className="w-full h-full bg-gray-800 flex items-center justify-center text-gray-500">

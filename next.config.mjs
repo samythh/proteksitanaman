@@ -9,6 +9,7 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 // 2. Setup Konfigurasi Utama (Gambar)
 const nextConfig = {
   images: {
+    formats: ["image/avif", "image/webp"],
     // Matikan optimasi static sementara jika perlu, tapi remotePatterns lebih penting
     remotePatterns: [
       {
