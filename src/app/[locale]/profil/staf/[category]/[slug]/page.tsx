@@ -6,31 +6,19 @@ import Link from "next/link";
 import { fetchAPI } from "@/lib/strapi/fetcher";
 import { getStrapiMedia } from "@/lib/strapi/utils";
 import { Staff } from "@/types/staff";
-import PageHeader from "@/components/ui/PageHeader"; // Menggunakan komponen Header yang sudah ada
+import { FaArrowLeft } from "react-icons/fa";
+import PageHeader from "@/components/ui/PageHeader";
 
 // Import Ikon Default (Fallback)
 import { SiGooglescholar } from "react-icons/si";
 import { FaBook, FaGlobe } from "react-icons/fa";
 
-// Helper untuk Rich Text (Jika education pakai Markdown)
-import ReactMarkdown from "react-markdown";
-
-// Interface Helper Gambar
-interface StrapiImage {
-  url?: string;
-  data?: {
-    attributes?: {
-      url?: string;
-    };
-  };
-}
-
-// 1. Generate Static Params (Untuk performa & SEO)
+// 1. Generate Static Params
 export async function generateStaticParams() {
   const staffData = await fetchAPI("/staff-members", {
     fields: ["slug", "category"],
-    populate: [], // Optimasi: Tidak perlu populate foto/detail di sini
-    pagination: { limit: 100 }, // Ambil cukup banyak data untuk generate path
+    populate: [],
+    pagination: { limit: 100 },
   });
 
   const locales = ["id", "en"];
@@ -40,7 +28,6 @@ export async function generateStaticParams() {
 
   for (const locale of locales) {
     for (const staff of staffData.data) {
-      // Support Strapi v4 (attributes) & v5 (flat)
       const attr = staff.attributes || staff;
       if (attr.slug && attr.category) {
         params.push({
@@ -74,12 +61,12 @@ export default async function StaffDetailPage({
         filters: { slug: { $eq: slug } },
         populate: {
           photo: { fields: ["url"] },
-          Role_Details: { populate: "*" }, // Ambil detail jabatan/pangkat
-          Education_History: { populate: "*" }, // Ambil riwayat pendidikan
+          Role_Details: { populate: "*" }, // PENTING: Data link ada di dalam sini
+          Education_History: { populate: "*" },
         },
         locale: locale,
       }),
-      // B. Config Halaman (Untuk Banner & Icon Sinta/Scopus)
+      // B. Config Halaman
       fetchAPI("/staff-page-config", {
         populate: {
           Default_Card_Banner: { fields: ["url"] },
@@ -89,7 +76,7 @@ export default async function StaffDetailPage({
         },
         locale: locale,
       }),
-      // C. Global (Hero Image Utama)
+      // C. Global
       fetchAPI("/global", {
         populate: "Default_Hero_Image",
         locale: locale,
@@ -103,23 +90,19 @@ export default async function StaffDetailPage({
     console.error("[StaffDetail] Error fetching data:", error);
   }
 
-  // Jika data staf tidak ditemukan -> 404
   if (!staff) {
     return notFound();
   }
 
-  // --- Ekstraksi Data (Support Strapi v4/v5) ---
+  // --- Ekstraksi Data ---
   const attr = (staff as any).attributes || staff;
   const {
     name,
     nip,
     photo,
     email,
-    Role_Details,
+    Role_Details, // Kita butuh ini untuk ambil link
     Education_History,
-    sinta_url,
-    scopus_url,
-    google_scholar_url,
   } = attr;
 
   // Foto Profil
@@ -128,7 +111,7 @@ export default async function StaffDetailPage({
     getStrapiMedia(photoObj?.attributes?.url || photoObj?.url) ||
     "/images/placeholder-avatar.png";
 
-  // Data Spesifik (Jabatan/Keahlian) dari Dynamic Zone
+  // Data Spesifik (Jabatan/Keahlian & Link)
   const academicData = Role_Details?.find(
     (item: any) => item.__component === "staff-data.academic-data"
   );
@@ -136,7 +119,6 @@ export default async function StaffDetailPage({
     (item: any) => item.__component === "staff-data.admin-data"
   );
 
-  // Teks Jabatan/Keahlian Utama
   let mainRole = "-";
   if (category === "akademik") {
     mainRole = academicData?.expertise || "Dosen";
@@ -144,18 +126,24 @@ export default async function StaffDetailPage({
     mainRole = adminData?.position || "Tenaga Kependidikan";
   }
 
-  // Banner & Hero Images
+  // --- LOGIKA PERBAIKAN URL ---
+  // Ambil URL dari academicData (di dalam Role_Details), BUKAN dari attr root
+  const sinta_url = academicData?.sinta_url;
+  const scopus_url = academicData?.scopus_url;
+  const google_scholar_url = academicData?.google_scholar_url;
+
+  // Helper URL Gambar
   const getUrl = (obj: any) => obj?.url || obj?.data?.attributes?.url;
 
   const heroUrl = getUrl(
     globalData?.attributes?.Default_Hero_Image || globalData?.Default_Hero_Image
   );
+
   const cardBannerUrl = getUrl(
     pageConfig?.attributes?.Default_Card_Banner ||
       pageConfig?.Default_Card_Banner
   );
 
-  // Icon Images
   const icons = {
     sinta: getUrl(pageConfig?.attributes?.Icon_Sinta || pageConfig?.Icon_Sinta),
     scopus: getUrl(
@@ -167,7 +155,6 @@ export default async function StaffDetailPage({
     ),
   };
 
-  // Label UI
   const roleLabel =
     category === "akademik"
       ? locale === "en"
@@ -181,26 +168,21 @@ export default async function StaffDetailPage({
 
   return (
     <div className="bg-gray-50 min-h-screen pb-20 -mt-20 md:-mt-24">
-      {/* 1. HERO HEADER */}
       <PageHeader
         title={name}
         breadcrumb={`Profil / Staf / ${roleLabel} / Detail`}
         backgroundImageUrl={heroUrl}
       />
 
-      {/* 2. KONTEN UTAMA */}
       <div className="container mx-auto px-4 -mt-20 relative z-10">
-        {/* Judul Section */}
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900">Profil</h2>
+          <h2 className="text-3xl font-bold text-white">Profil</h2>
           <h3 className="text-2xl font-bold text-green-600 mt-1">
             {roleLabel}
           </h3>
         </div>
 
-        {/* --- KARTU UTAMA --- */}
         <div className="bg-white rounded-xl shadow-xl overflow-hidden max-w-4xl mx-auto border border-gray-100">
-          {/* A. Banner Staf (Batik/Gedung) */}
           <div className="h-48 md:h-64 w-full relative">
             {cardBannerUrl ? (
               <Image
@@ -215,9 +197,7 @@ export default async function StaffDetailPage({
             <div className="absolute inset-0 bg-black/10"></div>
           </div>
 
-          {/* B. Foto & Info */}
           <div className="px-8 pb-10 relative text-center">
-            {/* Foto Bulat Besar */}
             <div className="relative -mt-24 mb-6 inline-block">
               <div className="w-40 h-40 md:w-48 md:h-48 rounded-full border-4 border-white shadow-lg overflow-hidden bg-gray-200 relative z-10">
                 {photoUrl ? (
@@ -235,36 +215,32 @@ export default async function StaffDetailPage({
               </div>
             </div>
 
-            {/* Nama & NIP */}
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
               {name}
             </h1>
-            <p className="text-lg text-gray-500 font-medium mb-4">
+            <p className="text-xl text-gray-500 font-medium mb-4">
               NIP: {nip || "-"}
             </p>
 
-            {/* Keahlian / Jabatan */}
             <div className="inline-block px-6 py-2 bg-green-50 rounded-full text-green-700 font-semibold mb-8">
               {mainRole}
             </div>
 
-            {/* --- SEKSI EMAIL --- */}
             {email && (
               <div className="mb-8 border-t border-gray-200 pt-8 max-w-2xl mx-auto">
-                <h4 className="text-xl font-bold text-gray-900 mb-4">Email</h4>
+                <h4 className="text-2xl font-bold text-gray-900 mb-4">Email</h4>
                 <a
                   href={`mailto:${email}`}
-                  className="text-lg text-gray-600 hover:text-green-600 underline decoration-green-600/30 underline-offset-4 transition-all"
+                  className="text-xl text-gray-600 hover:text-green-600 underline decoration-green-600/30 underline-offset-4 transition-all"
                 >
                   {email}
                 </a>
               </div>
             )}
 
-            {/* --- SEKSI PENDIDIKAN (Dari Component Education_History) --- */}
             {Education_History && Education_History.length > 0 && (
               <div className="mb-8 border-t border-gray-200 pt-8 max-w-2xl mx-auto text-center">
-                <h4 className="text-xl font-bold text-gray-900 mb-6">
+                <h4 className="text-2xl font-bold text-gray-900 mb-6">
                   {educationLabel}
                 </h4>
                 <div className="space-y-4">
@@ -273,7 +249,7 @@ export default async function StaffDetailPage({
                       <span className="font-semibold block text-gray-900">
                         {edu.level} {edu.major}
                       </span>
-                      <span className="text-sm text-gray-500">
+                      <span className="text-lg text-gray-500">
                         {edu.institution} {edu.year ? `(${edu.year})` : ""}
                       </span>
                     </div>
@@ -282,34 +258,43 @@ export default async function StaffDetailPage({
               </div>
             )}
 
-            {/* --- SOCIAL LINKS (Sinta/Scopus) --- */}
-            {/* Hanya untuk Akademik */}
+            {/* --- FOOTER: SOCIAL LINKS --- */}
             {category === "akademik" && (
-              <div className="flex justify-center gap-6 mt-10 pt-8 border-t border-gray-100">
-                {google_scholar_url && (
+              <div className="flex justify-center gap-6 mt-10 pt-8 border-t border-gray-100 items-center flex-wrap">
+                {/* 1. GOOGLE SCHOLAR */}
+                {google_scholar_url ? (
                   <Link
                     href={google_scholar_url}
                     target="_blank"
-                    className="hover:opacity-80 transition-opacity"
+                    className="hover:opacity-80 transition-opacity flex items-center justify-center"
+                    title="Google Scholar"
                   >
                     {icons.scholar ? (
                       <Image
                         src={getStrapiMedia(icons.scholar)!}
                         alt="Google Scholar"
-                        width={100}
+                        width={120}
                         height={40}
                         className="h-10 w-auto object-contain"
                       />
                     ) : (
-                      <SiGooglescholar className="w-8 h-8 text-blue-600" />
+                      <div className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:border-blue-500 hover:text-blue-600">
+                        <SiGooglescholar className="w-6 h-6" />
+                        <span className="font-medium text-sm">
+                          Google Scholar
+                        </span>
+                      </div>
                     )}
                   </Link>
-                )}
-                {sinta_url && (
+                ) : null}
+
+                {/* 2. SINTA */}
+                {sinta_url ? (
                   <Link
                     href={sinta_url}
                     target="_blank"
-                    className="hover:opacity-80 transition-opacity"
+                    className="hover:opacity-80 transition-opacity flex items-center justify-center"
+                    title="Sinta"
                   >
                     {icons.sinta ? (
                       <Image
@@ -317,18 +302,24 @@ export default async function StaffDetailPage({
                         alt="Sinta"
                         width={100}
                         height={40}
-                        className="h-10 w-auto object-contain"
+                        className="h-8 w-auto object-contain"
                       />
                     ) : (
-                      <FaBook className="w-8 h-8 text-blue-600" />
+                      <div className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:border-blue-600 hover:text-blue-600">
+                        <FaBook className="w-5 h-5" />
+                        <span className="font-medium text-sm">SINTA</span>
+                      </div>
                     )}
                   </Link>
-                )}
-                {scopus_url && (
+                ) : null}
+
+                {/* 3. SCOPUS */}
+                {scopus_url ? (
                   <Link
                     href={scopus_url}
                     target="_blank"
-                    className="hover:opacity-80 transition-opacity"
+                    className="hover:opacity-80 transition-opacity flex items-center justify-center"
+                    title="Scopus"
                   >
                     {icons.scopus ? (
                       <Image
@@ -336,26 +327,32 @@ export default async function StaffDetailPage({
                         alt="Scopus"
                         width={100}
                         height={40}
-                        className="h-10 w-auto object-contain"
+                        className="h-8 w-auto object-contain"
                       />
                     ) : (
-                      <FaGlobe className="w-8 h-8 text-orange-500" />
+                      <div className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:border-orange-500 hover:text-orange-600">
+                        <FaGlobe className="w-5 h-5" />
+                        <span className="font-medium text-sm">Scopus</span>
+                      </div>
                     )}
                   </Link>
-                )}
+                ) : null}
               </div>
             )}
           </div>
         </div>
 
-        {/* Tombol Kembali */}
-        <div className="text-center mt-12 mb-8">
+        <div className="text-center mt-12 mb-16">
           <Link
             href={`/${locale}/profil/staf/${category}`}
-            className="inline-flex items-center text-green-700 font-semibold hover:underline"
+            className="inline-flex items-center gap-2 px-8 py-3 bg-white border border-green-200 text-green-700 font-semibold rounded-full shadow-sm hover:shadow-md hover:bg-green-50 hover:border-green-300 transition-all duration-300 transform hover:-translate-y-1 group"
           >
-            ←{" "}
-            {locale === "en" ? "Back to Staff List" : "Kembali ke Daftar Staf"}
+            <FaArrowLeft className="text-sm transition-transform duration-300 group-hover:-translate-x-1" />
+            <span>
+              {locale === "en"
+                ? "Back to Staff List"
+                : "Kembali ke Daftar Staf"}
+            </span>
           </Link>
         </div>
       </div>

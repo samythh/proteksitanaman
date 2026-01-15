@@ -149,7 +149,7 @@ export default async function StaffPage({
       />
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 -mt-16 relative z-10">
+      <div className="container mx-auto px-4  relative z-10">
         {/* Box Filter */}
         <div className="bg-white rounded-t-xl p-8 pb-4 text-center shadow-sm border-b border-gray-50">
           <h2 className="text-2xl font-bold text-gray-800">{title}</h2>
