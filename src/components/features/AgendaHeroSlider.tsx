@@ -66,9 +66,10 @@ export default function AgendaHeroSlider({
                   src={imgUrl}
                   alt={title}
                   fill
-                  className="object-cover opacity-60"
+                  className="object-cover"
                   priority={index === 0}
                   loading={index === 0 ? "eager" : "lazy"}
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 100vw, 100vw"
                 />
               ) : (
                 <div className="w-full h-full bg-gray-800" />
