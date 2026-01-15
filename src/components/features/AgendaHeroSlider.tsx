@@ -49,7 +49,7 @@ export default function AgendaHeroSlider({
         }}
         className="w-full h-full"
       >
-        {data.map((item) => {
+        {data.map((item, index) => {
           // Ekstraksi Data (Support Strapi v4 & v5)
           const attr = (item as any).attributes || item;
           const { title, slug, startDate, location, image } = attr;
@@ -67,7 +67,8 @@ export default function AgendaHeroSlider({
                   alt={title}
                   fill
                   className="object-cover opacity-60"
-                  priority // Agar gambar loading cepat (LCP)
+                  priority={index === 0}
+                  loading={index === 0 ? "eager" : "lazy"}
                 />
               ) : (
                 <div className="w-full h-full bg-gray-800" />
