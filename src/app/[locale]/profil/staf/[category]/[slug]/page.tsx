@@ -174,9 +174,9 @@ export default async function StaffDetailPage({
         backgroundImageUrl={heroUrl}
       />
 
-      <div className="container mx-auto px-4 -mt-20 relative z-10">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-white">Profil</h2>
+      <div className="container mx-auto px-4 mt-14 relative z-10">
+        <div className="text-center mb-10">
+          <h2 className="text-3xl font-bold text-gray-900">Profil</h2>
           <h3 className="text-2xl font-bold text-green-600 mt-1">
             {roleLabel}
           </h3>

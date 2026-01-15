@@ -1,12 +1,12 @@
 // src/app/[locale]/informasi/agenda/[slug]/page.tsx
 
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
 import { fetchAPI } from "@/lib/strapi/fetcher";
 import { getStrapiMedia } from "@/lib/strapi/utils";
 import AgendaCard from "@/components/features/AgendaCard";
 import ShareButton from "@/components/features/ShareButton";
+import PosterLightBox from "@/components/ui/PosterLightBox"; // <--- IMPORT BARU
 import { BlocksRenderer } from "@strapi/blocks-react-renderer";
 
 // Icons
@@ -51,7 +51,7 @@ export default async function AgendaDetailPage({
       filters: { slug: { $eq: slug } },
       populate: {
         image: { fields: ["url"] },
-        tags: { populate: "*" }, // Ambil data tags
+        tags: { populate: "*" },
       },
       locale: locale,
     }),
@@ -101,23 +101,7 @@ export default async function AgendaDetailPage({
 
   return (
     <div className="bg-gray-50 min-h-screen pb-20">
-      {/* 1. HEADER SIMPLE (Breadcrumb) */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-30">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link
-            href={`/${locale}/informasi/agenda`}
-            className="text-sm font-medium text-gray-500 hover:text-green-600 flex items-center gap-2 transition-colors"
-          >
-            <FaArrowLeft />
-            {locale === "en" ? "Back to Agenda" : "Kembali ke Agenda"}
-          </Link>
-          <p className="text-xs text-gray-400 uppercase tracking-wider hidden md:block">
-            Informasi / Agenda / Detail
-          </p>
-        </div>
-      </div>
-
-      {/* 2. KONTEN UTAMA (Layout Grid) */}
+      {/* 1. KONTEN UTAMA (Layout Grid) */}
       <div className="container mx-auto px-4 py-12">
         <div className="bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden">
           {/* Header Judul (Di dalam Card) */}
@@ -170,21 +154,14 @@ export default async function AgendaDetailPage({
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
             {/* KOLOM KIRI: POSTER IMAGE (Sticky pada Desktop) */}
             <div className="lg:col-span-5 bg-gray-100 p-6 md:p-10 flex items-start justify-center border-r border-gray-100">
-              <div className="relative w-full aspect-[3/4] max-w-md shadow-lg rounded-2xl overflow-hidden sticky top-24">
-                {imgUrl ? (
-                  <Image
-                    src={imgUrl}
-                    alt={title}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, 40vw"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-200">
-                    No Poster Available
-                  </div>
-                )}
-              </div>
+              {imgUrl ? (
+                // UPDATE: MENGGUNAKAN LIGHTBOX COMPONENT
+                <PosterLightBox src={imgUrl} alt={title} />
+              ) : (
+                <div className="relative w-full aspect-[3/4] max-w-md shadow-lg rounded-2xl overflow-hidden sticky top-24 bg-gray-200 flex items-center justify-center text-gray-400">
+                  No Poster Available
+                </div>
+              )}
             </div>
 
             {/* KOLOM KANAN: DESCRIPTION TEXT */}
