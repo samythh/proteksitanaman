@@ -6,14 +6,14 @@ import { fetchAPI } from "@/lib/strapi/fetcher";
 import { getStrapiMedia } from "@/lib/strapi/utils";
 import AgendaCard from "@/components/features/AgendaCard";
 import ShareButton from "@/components/features/ShareButton";
-import PosterLightBox from "@/components/ui/PosterLightBox"; // <--- IMPORT BARU
+import PosterLightBox from "@/components/ui/PosterLightBox";
 import { BlocksRenderer } from "@strapi/blocks-react-renderer";
 
 // Icons
 import {
   FaCalendarAlt,
   FaMapMarkerAlt,
-  FaTag,
+  FaTag, // Import FaTag
   FaArrowLeft,
 } from "react-icons/fa";
 
@@ -51,7 +51,7 @@ export default async function AgendaDetailPage({
       filters: { slug: { $eq: slug } },
       populate: {
         image: { fields: ["url"] },
-        tags: { populate: "*" },
+        tags: { populate: "*" }, // Ambil data tags
       },
       locale: locale,
     }),
@@ -96,12 +96,12 @@ export default async function AgendaDetailPage({
   const dateDisplay =
     startStr === endStr ? startStr : `${startStr} - ${endStr}`;
 
-  // Tags Helper
-  const tagsList = tags?.data || [];
+  // Tags Helper: Handle both Strapi v4 (tags.data) and v5 (tags array) structures
+  const tagsList = Array.isArray(tags) ? tags : tags?.data || [];
 
   return (
     <div className="bg-gray-50 min-h-screen pb-20">
-      {/* 1. KONTEN UTAMA (Layout Grid) */}
+      {/* 2. KONTEN UTAMA (Layout Grid) */}
       <div className="container mx-auto px-4 py-12">
         <div className="bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden">
           {/* Header Judul (Di dalam Card) */}
@@ -112,8 +112,9 @@ export default async function AgendaDetailPage({
                 tagsList.map((tag: any) => (
                   <span
                     key={tag.id}
-                    className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider"
+                    className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1"
                   >
+                    <FaTag className="text-[10px]" /> {/* Ikon Tag */}
                     {tag.attributes ? tag.attributes.name : tag.name}
                   </span>
                 ))
@@ -155,7 +156,6 @@ export default async function AgendaDetailPage({
             {/* KOLOM KIRI: POSTER IMAGE (Sticky pada Desktop) */}
             <div className="lg:col-span-5 bg-gray-100 p-6 md:p-10 flex items-start justify-center border-r border-gray-100">
               {imgUrl ? (
-                // UPDATE: MENGGUNAKAN LIGHTBOX COMPONENT
                 <PosterLightBox src={imgUrl} alt={title} />
               ) : (
                 <div className="relative w-full aspect-[3/4] max-w-md shadow-lg rounded-2xl overflow-hidden sticky top-24 bg-gray-200 flex items-center justify-center text-gray-400">
