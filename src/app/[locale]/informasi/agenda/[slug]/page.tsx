@@ -15,6 +15,7 @@ import {
   FaMapMarkerAlt,
   FaArrowLeft,
   FaRegImage,
+  FaTag, // Diambil dari Incoming (Fitur baru)
 } from "react-icons/fa";
 
 // --- TYPE DEFINITIONS ---
@@ -94,7 +95,7 @@ export default async function AgendaDetailPage({
 }) {
   const { slug, locale } = await params;
 
-  // --- FETCH DATA ---
+  // --- FETCH DATA (Menggunakan Versi HEAD yang lebih aman) ---
   let event: EventItem | null = null;
   let relatedEvents: EventItem[] = [];
 
@@ -152,9 +153,10 @@ export default async function AgendaDetailPage({
       ? formatDate(sDate)
       : `${formatDate(sDate)} - ${formatDate(eDate)}`;
 
+  // Handle Tags: Support both nested and flat structure
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tagsData = tags as any;
-  const tagsList: Tag[] = tagsData?.data || tagsData || [];
+  const tagsList: Tag[] = Array.isArray(tagsData) ? tagsData : tagsData?.data || [];
 
   return (
     <div className="bg-gray-50 min-h-screen pb-20 pt-24 md:pt-32">
@@ -170,8 +172,10 @@ export default async function AgendaDetailPage({
                 tagsList.map((tag: Tag, idx: number) => (
                   <span
                     key={idx}
-                    className="bg-green-100 text-green-700 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm"
+                    // Menggabungkan Style HEAD dengan Ikon dari Incoming
+                    className="bg-green-100 text-green-700 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm flex items-center gap-2"
                   >
+                    <FaTag className="text-[10px] opacity-70" /> {/* Ikon Tag Added */}
                     {tag.attributes ? tag.attributes.name : tag.name}
                   </span>
                 ))
@@ -207,7 +211,7 @@ export default async function AgendaDetailPage({
             </div>
           </div>
 
-          {/* B. BADAN KONTEN (Grid Layout) */}
+          {/* B. BADAN KONTEN (Grid Layout - Menggunakan Versi HEAD Sticky Poster) */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 relative">
 
             {/* KOLOM KIRI: POSTER */}
