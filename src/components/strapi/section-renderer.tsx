@@ -4,7 +4,7 @@
 
 import { getStrapiMedia } from "@/lib/strapi/utils";
 
-// Components Imports
+// Components Imports (Existing)
 import HeroSlider from "@/components/sections/HeroSlider";
 import QuickAccess from "@/components/sections/QuickAccess";
 import VideoProfile, { VideoSlide } from "@/components/sections/VideoProfile";
@@ -17,9 +17,19 @@ import VisitorStats from "@/components/sections/VisitorStats";
 import OtherLinkSection, { LinkItemData } from "@/components/sections/OtherLinkSection";
 import FAQSection from "@/components/sections/FAQSection";
 
+// --- IMPORT BARU ---
+import PageHeader from "@/components/ui/PageHeader";
+import RichText from "@/components/sections/RichText";
+
+// --- IMPORT AGENDA (TAMBAHAN) ---
+import AgendaPreview from "@/components/sections/AgendaPreview"; // <--- 1. Import Komponen
+import { Agenda } from "@/types/agenda"; // <--- 2. Import Tipe Data
+
 interface GlobalData {
    articles?: NewsItem[];
    locale?: string;
+   globalHeroUrl?: string;
+   latestEvents?: Agenda[]; // <--- 3. Daftarkan di Interface
 }
 
 interface SectionRendererProps {
@@ -38,6 +48,40 @@ export default function SectionRenderer({
 
       switch (section.__component) {
 
+         // --- 1. PAGE HEADER ---
+         case "layout.page-header": {
+            const specificImg = section.backgroundImage?.url || section.backgroundImage?.data?.attributes?.url;
+            const finalBg = specificImg || globalData?.globalHeroUrl;
+
+            return (
+               <PageHeader
+                  key={index}
+                  title={section.title}
+                  breadcrumb={section.breadcrumb}
+                  backgroundImageUrl={finalBg}
+                  sectionTitle={section.sectionTitle}
+                  sectionSubtitle={section.sectionSubtitle}
+               />
+            );
+         }
+
+         // --- 2. RICH TEXT ---
+         case "sections.rich-text":
+         case "layout.rich-text":
+            return <RichText key={index} data={section} />;
+
+         // --- 3. AGENDA PREVIEW (TAMBAHAN) ---
+         case "sections.agenda-preview":
+            return (
+               <AgendaPreview
+                  key={index}
+                  data={section} // Config Judul/Link dari Strapi
+                  events={globalData?.latestEvents || []} // Data Event dari page.tsx
+                  locale={globalData?.locale || "id"}
+               />
+            );
+
+         // --- EXISTING COMPONENTS ---
          case "sections.hero-slider":
             return <HeroSlider key={index} data={section} />;
 
@@ -106,12 +150,9 @@ export default function SectionRenderer({
                />
             );
 
-         // --- VISITOR STATS (UPDATE: Mapping Background Image) ---
          case "sections.visitor-stats":
-            // Kita inject properti backgroundPatternUrl ke dalam data yang dikirim ke komponen
             const visitorStatsData = {
                ...section,
-               // Mengambil URL dari object media Strapi
                backgroundPatternUrl: getStrapiMedia(section.background_pattern?.url) || ""
             };
             return <VisitorStats key={index} data={visitorStatsData} />;

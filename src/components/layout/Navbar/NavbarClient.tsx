@@ -41,7 +41,6 @@ export default function NavbarClient({
   siteName = "Departemen Proteksi Tanaman",
   siteDescription = "",
 }: NavbarClientProps) {
-  const [isMounted, setIsMounted] = React.useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
   // State untuk kontrol animasi
@@ -136,25 +135,10 @@ export default function NavbarClient({
 
   // --- Utilities ---
   React.useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  React.useEffect(() => {
     setMobileMenuOpen(false);
   }, [pathname]);
 
-  React.useEffect(() => {
-    if (mobileMenuOpen || isDrawerVisible) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
-    }
-    return () => {
-      document.body.style.overflow = "unset";
-    };
-  }, [mobileMenuOpen, isDrawerVisible]);
-
-  // Prevent body scroll
+  // Prevent body scroll (Hanya satu useEffect)
   React.useEffect(() => {
     if (mobileMenuOpen || isDrawerVisible) {
       document.body.style.overflow = "hidden";

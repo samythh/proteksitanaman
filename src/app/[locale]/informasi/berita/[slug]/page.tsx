@@ -1,4 +1,5 @@
 // File: src/app/[locale]/informasi/berita/[slug]/page.tsx
+
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -8,26 +9,21 @@ import { fetchAPI } from "@/lib/strapi/fetcher";
 import { getStrapiMedia } from "@/lib/strapi/utils";
 import { BlocksRenderer, type BlocksContent } from "@strapi/blocks-react-renderer";
 
-import ShareButton from "@/components/ui/ShareButton";
-// --- PERBAIKAN 1: Import Component Gambar Baru ---
+import ShareButton from "@/components/features/ShareButton";
 import NewsCoverImage from "@/components/ui/NewsCoverImage";
 
 // --- KAMUS TERJEMAHAN (DICTIONARY) ---
 const DICTIONARY = {
    id: {
-      shareLabel: "Bagikan postingan ini",
       relatedNews: "Berita Lainnya",
       loadMore: "Lebih banyak",
       defaultAuthor: "Departemen Proteksi Tanaman",
-      backToNews: "Kembali ke Berita",
       categoryDefault: "Berita"
    },
    en: {
-      shareLabel: "Share this post",
       relatedNews: "Related News",
       loadMore: "View more",
       defaultAuthor: "Department of Plant Protection",
-      backToNews: "Back to News",
       categoryDefault: "News"
    }
 };
@@ -165,8 +161,6 @@ export default async function BeritaDetailPage({ params }: PageProps) {
             </header>
 
             {coverUrl && (
-               // --- PERBAIKAN 2: Menggunakan Component Client Baru ---
-               // Class relative, h-[...], rounded, dll tetap di parent agar layout tidak berubah
                <div className="relative w-full h-[300px] md:h-[500px] mb-8 rounded-xl overflow-hidden shadow-lg">
                   <NewsCoverImage
                      src={coverUrl}
@@ -179,9 +173,9 @@ export default async function BeritaDetailPage({ params }: PageProps) {
                <BlocksRenderer content={article.content} />
             </div>
 
-            {/* SHARE SECTION */}
-            <div className="border-t border-gray-200 pt-4 mb-16 flex flex-col md:flex-row justify-end items-center gap-2">
-               <ShareButton label={t.shareLabel} />
+            {/* --- BAGIAN SHARE DI KANAN BAWAH --- */}
+            <div className="border-t border-gray-200 pt-6 mt-12 flex justify-end">
+               <ShareButton title={article.title} />
             </div>
          </article>
 

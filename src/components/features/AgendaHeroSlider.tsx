@@ -14,6 +14,44 @@ import "swiper/css/navigation";
 
 import { FaChevronRight, FaChevronLeft } from "react-icons/fa";
 
+// --- TYPE DEFINITIONS ---
+
+interface Tag {
+  id: number;
+  attributes?: { name: string };
+  name?: string;
+}
+
+interface AgendaAttributes {
+  title: string;
+  slug: string;
+  startDate: string;
+  endDate: string;
+  image?: {
+    data?: {
+      attributes?: { url: string };
+    };
+    url?: string;
+  };
+  tags?: {
+    data: Tag[];
+  } | Tag[];
+}
+
+interface AgendaItem {
+  id: number;
+  attributes?: AgendaAttributes;
+  // Fallback properties for flattened structure
+  title?: string;
+  slug?: string;
+  startDate?: string;
+  endDate?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  image?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  tags?: any;
+}
+
 interface AgendaHeroSliderProps {
   data: Agenda[];
   locale: string;
@@ -25,7 +63,8 @@ export default function AgendaHeroSlider({
 }: AgendaHeroSliderProps) {
   if (!data || data.length === 0) return null;
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return "";
     return new Date(dateString).toLocaleDateString(
       locale === "id" ? "id-ID" : "en-US",
       { day: "numeric", month: "long", year: "numeric" }
@@ -64,7 +103,10 @@ export default function AgendaHeroSlider({
         className="w-full h-full"
       >
         {data.map((item, index) => {
-          const attr = (item as any).attributes || item;
+          // FIX: Type Assertion yang aman
+          const rawItem = item as unknown as AgendaItem;
+          const attr = rawItem.attributes || rawItem;
+
           const { title, slug, startDate, endDate, image, tags } = attr;
           const imgUrl = getStrapiMedia(
             image?.data?.attributes?.url || image?.url
@@ -80,7 +122,10 @@ export default function AgendaHeroSlider({
             { id: 2, attributes: { name: "Sertifikat" } },
             { id: 3, attributes: { name: "Free Entry" } },
           ];
-          const tagsList = Array.isArray(tags) ? tags : tags?.data || dummyTags;
+
+          const tagsList: Tag[] = Array.isArray(tags)
+            ? tags
+            : tags?.data || dummyTags;
 
           return (
             <SwiperSlide
@@ -92,7 +137,7 @@ export default function AgendaHeroSlider({
                 <div className="absolute inset-0 z-0">
                   <Image
                     src={imgUrl}
-                    alt={title}
+                    alt={title || "Agenda"}
                     fill
                     quality={100}
                     priority={index === 0}
@@ -102,17 +147,15 @@ export default function AgendaHeroSlider({
               )}
 
               {/* 2. CONTENT CONTAINER (CENTERED) */}
-              {/* Flexbox digunakan untuk memastikan kartu berada tepat di tengah layar */}
               <div className="relative z-10 w-full h-full flex items-center justify-center px-4 md:px-0">
                 {/* KARTU GLASSMORPHISM */}
-                {/* Update: max-w-5xl (lebih kecil dari sebelumnya max-w-6xl) */}
                 <div className="w-full max-w-5xl bg-white/85 backdrop-blur-xl rounded-[2.5rem] shadow-2xl border border-white/50 p-6 md:p-10 grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 items-center transform transition-all mx-auto">
                   {/* KOLOM KIRI: POSTER IMAGE */}
                   <div className="md:col-span-5 relative aspect-[3/4] w-full max-w-[280px] mx-auto md:max-w-full rounded-2xl overflow-hidden shadow-lg bg-gray-200">
                     {imgUrl ? (
                       <Image
                         src={imgUrl}
-                        alt={title}
+                        alt={title || "Agenda Poster"}
                         fill
                         className="object-cover"
                         sizes="(max-width: 768px) 100vw, 40vw"
@@ -139,7 +182,8 @@ export default function AgendaHeroSlider({
 
                     {/* Tags */}
                     <div className="flex flex-wrap gap-2">
-                      {tagsList.slice(0, 3).map((tag: any, idx: number) => (
+                      {/* FIX: Menggunakan Type Tag di parameter map */}
+                      {tagsList.slice(0, 3).map((tag: Tag, idx: number) => (
                         <span
                           key={tag.id}
                           className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider shadow-sm ${getTagStyle(

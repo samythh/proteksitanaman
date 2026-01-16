@@ -1,9 +1,48 @@
-// src/components/features/AgendaCard.tsx
+// File: src/components/features/AgendaCard.tsx
 import Image from "next/image";
 import Link from "next/link";
 import { getStrapiMedia } from "@/lib/strapi/utils";
 import { Agenda } from "@/types/agenda";
-import { FaChevronRight } from "react-icons/fa";
+// HAPUS: import { FaChevronRight } from "react-icons/fa"; (Tidak digunakan)
+
+// --- TYPE DEFINITIONS ---
+
+interface Tag {
+  id: number;
+  attributes?: { name: string };
+  name?: string;
+}
+
+interface AgendaAttributes {
+  title: string;
+  slug: string;
+  startDate: string;
+  endDate: string;
+  image?: {
+    data?: {
+      attributes?: { url: string };
+    };
+    url?: string;
+  };
+  tags?: {
+    data: Tag[];
+  } | Tag[];
+}
+
+// Interface fleksibel untuk menangani struktur Strapi (Nested / Flat)
+interface AgendaItem {
+  id?: number;
+  attributes?: AgendaAttributes;
+  // Fallback properties
+  title?: string;
+  slug?: string;
+  startDate?: string;
+  endDate?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  image?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  tags?: any;
+}
 
 interface AgendaCardProps {
   data: Agenda;
@@ -11,7 +50,10 @@ interface AgendaCardProps {
 }
 
 export default function AgendaCard({ data, locale }: AgendaCardProps) {
-  const attr = (data as any).attributes || data;
+  // FIX: Menggunakan Type Assertion ke AgendaItem alih-alih any
+  const rawData = data as unknown as AgendaItem;
+  const attr = rawData.attributes || rawData;
+
   const { title, slug, startDate, endDate, image, tags } = attr;
 
   const imgUrl =
@@ -19,7 +61,7 @@ export default function AgendaCard({ data, locale }: AgendaCardProps) {
     "/images/placeholder-agenda.jpg";
 
   // Format Tanggal
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | undefined) => {
     if (!dateString) return "-";
     return new Date(dateString).toLocaleDateString(
       locale === "en" ? "en-US" : "id-ID",
@@ -37,14 +79,14 @@ export default function AgendaCard({ data, locale }: AgendaCardProps) {
     startStr === endStr ? startStr : `${startStr} - ${endStr}`;
 
   // --- LOGIKA TAGS ---
-  const tagsList = Array.isArray(tags)
+  const tagsList: Tag[] = Array.isArray(tags)
     ? tags
     : tags?.data || [
-        { id: 1, attributes: { name: "Terbuka untuk umum" } },
-        { id: 2, attributes: { name: "Sertifikat" } },
-        { id: 3, attributes: { name: "Gratis" } },
-        { id: 4, attributes: { name: "Online" } },
-      ];
+      { id: 1, attributes: { name: "Terbuka untuk umum" } },
+      { id: 2, attributes: { name: "Sertifikat" } },
+      { id: 3, attributes: { name: "Gratis" } },
+      { id: 4, attributes: { name: "Online" } },
+    ];
 
   const visibleTags = tagsList.slice(0, 2);
   const hiddenCount = tagsList.length - 2;
@@ -66,7 +108,7 @@ export default function AgendaCard({ data, locale }: AgendaCardProps) {
         <div className="relative w-full aspect-[3/4] mb-4 rounded-2xl overflow-hidden shadow-sm">
           <Image
             src={imgUrl}
-            alt={title}
+            alt={title || "Agenda"}
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-500"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -86,11 +128,12 @@ export default function AgendaCard({ data, locale }: AgendaCardProps) {
           </div>
         </div>
 
-        {/* 3. FOOTER: TAGS & ICON PANAH */}
+        {/* 3. FOOTER: TAGS */}
         <div className="mt-auto flex items-center justify-between gap-2 pt-2">
           {/* Tags Area */}
           <div className="flex items-center gap-2 flex-wrap">
-            {visibleTags.map((tag: any, index: number) => (
+            {/* FIX: Menggunakan tipe Tag untuk parameter map */}
+            {visibleTags.map((tag: Tag, index: number) => (
               <span
                 key={tag.id}
                 className={`text-[10px] font-semibold px-3 py-1.5 rounded-lg whitespace-nowrap shadow-sm ${getTagStyle(
@@ -107,8 +150,6 @@ export default function AgendaCard({ data, locale }: AgendaCardProps) {
               </span>
             )}
           </div>
-
-          {/* Tombol Panah (Hanya Visual, bukan Link lagi) */}
         </div>
       </div>
     </Link>

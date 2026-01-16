@@ -1,17 +1,88 @@
-// src/app/[locale]/profil/staf/[category]/[slug]/page.tsx
+// File: src/app/[locale]/profil/staf/[category]/[slug]/page.tsx
 
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { fetchAPI } from "@/lib/strapi/fetcher";
 import { getStrapiMedia } from "@/lib/strapi/utils";
-import { Staff } from "@/types/staff";
-import { FaArrowLeft } from "react-icons/fa";
+import { FaArrowLeft, FaBook, FaGlobe } from "react-icons/fa";
+import { SiGooglescholar } from "react-icons/si";
 import PageHeader from "@/components/ui/PageHeader";
 
-// Import Ikon Default (Fallback)
-import { SiGooglescholar } from "react-icons/si";
-import { FaBook, FaGlobe } from "react-icons/fa";
+// --- TYPE DEFINITIONS ---
+
+interface StrapiImage {
+  url?: string;
+  data?: {
+    attributes?: {
+      url?: string;
+    };
+  } | null;
+}
+
+interface EducationItem {
+  id: number;
+  level: string;
+  major: string;
+  institution: string;
+  year?: string;
+}
+
+interface RoleDetail {
+  id: number;
+  __component: string;
+  expertise?: string; // Untuk academic-data
+  sinta_url?: string;
+  scopus_url?: string;
+  google_scholar_url?: string;
+  position?: string; // Untuk admin-data
+}
+
+interface StaffAttributes {
+  name: string;
+  nip: string;
+  email: string;
+  slug: string;
+  category: string;
+  photo?: StrapiImage;
+  Role_Details?: RoleDetail[];
+  Education_History?: EducationItem[];
+}
+
+interface StaffItem {
+  id: number;
+  attributes?: StaffAttributes;
+  // Fallback properties for flattened structure
+  name?: string;
+  nip?: string;
+  photo?: StrapiImage;
+  email?: string;
+  slug?: string;
+  category?: string;
+  Role_Details?: RoleDetail[];
+  Education_History?: EducationItem[];
+}
+
+interface PageConfig {
+  attributes?: {
+    Default_Card_Banner?: StrapiImage;
+    Icon_Sinta?: StrapiImage;
+    Icon_Scopus?: StrapiImage;
+    Icon_GoogleScholar?: StrapiImage;
+  };
+  // Fallback flattened
+  Default_Card_Banner?: StrapiImage;
+  Icon_Sinta?: StrapiImage;
+  Icon_Scopus?: StrapiImage;
+  Icon_GoogleScholar?: StrapiImage;
+}
+
+interface GlobalData {
+  attributes?: {
+    Default_Hero_Image?: StrapiImage;
+  };
+  Default_Hero_Image?: StrapiImage;
+}
 
 // 1. Generate Static Params
 export async function generateStaticParams() {
@@ -27,7 +98,8 @@ export async function generateStaticParams() {
   if (!staffData?.data) return [];
 
   for (const locale of locales) {
-    for (const staff of staffData.data) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const staff of staffData.data as any[]) {
       const attr = staff.attributes || staff;
       if (attr.slug && attr.category) {
         params.push({
@@ -50,9 +122,9 @@ export default async function StaffDetailPage({
   const { category, slug, locale } = await params;
 
   // --- Fetch Data ---
-  let staff: Staff | null = null;
-  let pageConfig: any = null;
-  let globalData: any = null;
+  let staff: StaffItem | null = null;
+  let pageConfig: PageConfig | null = null;
+  let globalData: GlobalData | null = null;
 
   try {
     const [staffRes, configRes, globalRes] = await Promise.all([
@@ -61,7 +133,7 @@ export default async function StaffDetailPage({
         filters: { slug: { $eq: slug } },
         populate: {
           photo: { fields: ["url"] },
-          Role_Details: { populate: "*" }, // PENTING: Data link ada di dalam sini
+          Role_Details: { populate: "*" },
           Education_History: { populate: "*" },
         },
         locale: locale,
@@ -95,28 +167,32 @@ export default async function StaffDetailPage({
   }
 
   // --- Ekstraksi Data ---
-  const attr = (staff as any).attributes || staff;
+  const rawStaff = staff as StaffItem;
+  const attr = rawStaff.attributes || rawStaff;
+
   const {
     name,
     nip,
     photo,
     email,
-    Role_Details, // Kita butuh ini untuk ambil link
-    Education_History,
-  } = attr;
+    Role_Details = [],
+    Education_History = [],
+  } = attr as StaffAttributes;
 
-  // Foto Profil
-  const photoObj = photo?.data || photo;
+  // --- PERBAIKAN DI SINI (FIX TYPESCRIPT ERROR) ---
+  // Kita casting ke 'any' karena 'photoObj' bisa berupa dua struktur berbeda (flat/nested)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const photoObj = (photo?.data || photo) as any;
+
   const photoUrl =
     getStrapiMedia(photoObj?.attributes?.url || photoObj?.url) ||
     "/images/placeholder-avatar.png";
 
-  // Data Spesifik (Jabatan/Keahlian & Link)
   const academicData = Role_Details?.find(
-    (item: any) => item.__component === "staff-data.academic-data"
+    (item: RoleDetail) => item.__component === "staff-data.academic-data"
   );
   const adminData = Role_Details?.find(
-    (item: any) => item.__component === "staff-data.admin-data"
+    (item: RoleDetail) => item.__component === "staff-data.admin-data"
   );
 
   let mainRole = "-";
@@ -126,14 +202,13 @@ export default async function StaffDetailPage({
     mainRole = adminData?.position || "Tenaga Kependidikan";
   }
 
-  // --- LOGIKA PERBAIKAN URL ---
-  // Ambil URL dari academicData (di dalam Role_Details), BUKAN dari attr root
+  // --- Helper URL ---
   const sinta_url = academicData?.sinta_url;
   const scopus_url = academicData?.scopus_url;
   const google_scholar_url = academicData?.google_scholar_url;
 
-  // Helper URL Gambar
-  const getUrl = (obj: any) => obj?.url || obj?.data?.attributes?.url;
+  const getUrl = (obj: StrapiImage | undefined | null) =>
+    obj?.url || obj?.data?.attributes?.url;
 
   const heroUrl = getUrl(
     globalData?.attributes?.Default_Hero_Image || globalData?.Default_Hero_Image
@@ -141,7 +216,7 @@ export default async function StaffDetailPage({
 
   const cardBannerUrl = getUrl(
     pageConfig?.attributes?.Default_Card_Banner ||
-      pageConfig?.Default_Card_Banner
+    pageConfig?.Default_Card_Banner
   );
 
   const icons = {
@@ -151,7 +226,7 @@ export default async function StaffDetailPage({
     ),
     scholar: getUrl(
       pageConfig?.attributes?.Icon_GoogleScholar ||
-        pageConfig?.Icon_GoogleScholar
+      pageConfig?.Icon_GoogleScholar
     ),
   };
 
@@ -161,26 +236,23 @@ export default async function StaffDetailPage({
         ? "Academic Staff"
         : "Staf Akademik"
       : locale === "en"
-      ? "Administrative Staff"
-      : "Staf Administrasi";
+        ? "Administrative Staff"
+        : "Staf Administrasi";
 
   const educationLabel = locale === "en" ? "Education" : "Pendidikan";
 
   return (
     <div className="bg-gray-50 min-h-screen pb-20 -mt-20 md:-mt-24">
+
       <PageHeader
         title={name}
         breadcrumb={`Profil / Staf / ${roleLabel} / Detail`}
         backgroundImageUrl={heroUrl}
+        sectionTitle="Profil"
+        sectionSubtitle={roleLabel}
       />
 
-      <div className="container mx-auto px-4 mt-14 relative z-10">
-        <div className="text-center mb-10">
-          <h2 className="text-3xl font-bold text-gray-900">Profil</h2>
-          <h3 className="text-2xl font-bold text-green-600 mt-1">
-            {roleLabel}
-          </h3>
-        </div>
+      <div className="container mx-auto px-4 relative z-10">
 
         <div className="bg-white rounded-xl shadow-xl overflow-hidden max-w-4xl mx-auto border border-gray-100">
           <div className="h-48 md:h-64 w-full relative">
@@ -203,7 +275,7 @@ export default async function StaffDetailPage({
                 {photoUrl ? (
                   <Image
                     src={photoUrl}
-                    alt={name}
+                    alt={name || "Staff Photo"}
                     fill
                     className="object-cover"
                   />
@@ -244,7 +316,7 @@ export default async function StaffDetailPage({
                   {educationLabel}
                 </h4>
                 <div className="space-y-4">
-                  {Education_History.map((edu: any, index: number) => (
+                  {Education_History.map((edu: EducationItem, index: number) => (
                     <div key={index} className="text-gray-700">
                       <span className="font-semibold block text-gray-900">
                         {edu.level} {edu.major}
@@ -258,10 +330,8 @@ export default async function StaffDetailPage({
               </div>
             )}
 
-            {/* --- FOOTER: SOCIAL LINKS --- */}
             {category === "akademik" && (
               <div className="flex justify-center gap-6 mt-10 pt-8 border-t border-gray-100 items-center flex-wrap">
-                {/* 1. GOOGLE SCHOLAR */}
                 {google_scholar_url ? (
                   <Link
                     href={google_scholar_url}
@@ -288,7 +358,6 @@ export default async function StaffDetailPage({
                   </Link>
                 ) : null}
 
-                {/* 2. SINTA */}
                 {sinta_url ? (
                   <Link
                     href={sinta_url}
@@ -313,7 +382,6 @@ export default async function StaffDetailPage({
                   </Link>
                 ) : null}
 
-                {/* 3. SCOPUS */}
                 {scopus_url ? (
                   <Link
                     href={scopus_url}

@@ -1,56 +1,91 @@
-// File: src/components/ui/ShareButton.tsx
+// File: src/components/features/ShareButton.tsx
 "use client";
 
-// PERBAIKAN: Hapus 'Copy' dari import karena tidak dipakai
-import { Share2, Check } from "lucide-react";
-import { useState } from "react";
+import { FaShareAlt, FaFacebook, FaTwitter, FaWhatsapp } from "react-icons/fa";
+import { useState, useEffect } from "react";
 
+// 1. UPDATE INTERFACE: Tambahkan 'showLabel' (optional)
 interface ShareButtonProps {
-   label: string;
+   title: string;
+   showLabel?: boolean; // Default nanti kita set true
 }
 
-export default function ShareButton({ label }: ShareButtonProps) {
+export default function ShareButton({ title, showLabel = true }: ShareButtonProps) {
    const [copied, setCopied] = useState(false);
+   const [shareUrl, setShareUrl] = useState("");
 
-   const handleShare = async () => {
-      // Cek apakah browser mendukung fitur Share bawaan (biasanya Mobile)
-      if (navigator.share) {
-         try {
-            await navigator.share({
-               title: document.title,
-               url: window.location.href,
-            });
-         } catch (err) {
-            console.error("Error sharing:", err);
-         }
-      } else {
-         // Fallback untuk Desktop: Copy Link ke Clipboard
-         try {
-            await navigator.clipboard.writeText(window.location.href);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000); // Reset icon setelah 2 detik
-         } catch (err) {
-            console.error("Gagal menyalin link:", err);
-         }
-      }
+   // Ambil URL browser saat komponen dimount (Client-side only)
+   useEffect(() => {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShareUrl(window.location.href);
+   }, []);
+
+   const handleCopy = () => {
+      navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
    };
 
-   return (
-      <button
-         onClick={handleShare}
-         className="flex items-center gap-2 text-gray-500 hover:text-[#005320] transition-colors group"
-         aria-label="Share this post"
-      >
-         <span className="text-sm font-semibold transition-all">
-            {copied ? "Link Disalin!" : label}
-         </span>
+   // Link Generator
+   const currentUrl = shareUrl || "";
 
-         {/* Icon berubah jadi Check jika berhasil dicopy, jika belum icon Share */}
-         {copied ? (
-            <Check className="w-5 h-5 text-green-600" />
-         ) : (
-            <Share2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
+   const facebookLink = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl)}`;
+   const twitterLink = `https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(currentUrl)}`;
+   const waLink = `https://wa.me/?text=${encodeURIComponent(title + " " + currentUrl)}`;
+
+   return (
+      // 2. LOGIC STYLE: Jika showLabel=false, hilangkan border & margin vertikal agar rapi
+      <div className={`flex items-center gap-4 ${showLabel ? "py-6 border-t border-b border-gray-100 my-8" : ""}`}>
+
+         {/* 3. LOGIC TEXT: Tampilkan teks hanya jika showLabel=true */}
+         {showLabel && (
+            <span className="text-gray-600 font-semibold flex items-center gap-2">
+               Share post ini <FaShareAlt />
+            </span>
          )}
-      </button>
+
+         <div className="flex gap-3">
+            {/* Facebook */}
+            <a
+               href={facebookLink}
+               target="_blank"
+               rel="noopener noreferrer"
+               className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center hover:opacity-80 transition-opacity"
+               aria-label="Share on Facebook"
+            >
+               <FaFacebook />
+            </a>
+
+            {/* Twitter / X */}
+            <a
+               href={twitterLink}
+               target="_blank"
+               rel="noopener noreferrer"
+               className="w-8 h-8 rounded-full bg-sky-500 text-white flex items-center justify-center hover:opacity-80 transition-opacity"
+               aria-label="Share on Twitter"
+            >
+               <FaTwitter />
+            </a>
+
+            {/* WhatsApp */}
+            <a
+               href={waLink}
+               target="_blank"
+               rel="noopener noreferrer"
+               className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center hover:opacity-80 transition-opacity"
+               aria-label="Share on WhatsApp"
+            >
+               <FaWhatsapp />
+            </a>
+
+            {/* Copy Link Button */}
+            <button
+               onClick={handleCopy}
+               className="px-3 py-1 text-xs border rounded hover:bg-gray-50 transition-colors"
+            >
+               {copied ? "Copied!" : "Copy Link"}
+            </button>
+         </div>
+      </div>
    );
 }
