@@ -4,7 +4,8 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Calendar, ChevronRight, Filter, Loader2, ArrowRight } from "lucide-react";
+import { Calendar, ChevronRight, Filter, Loader2 } from "lucide-react";
+import { FaArrowLeft } from "react-icons/fa"; // Tambahkan icon ini
 import { getStrapiMedia } from "@/lib/strapi/utils";
 import qs from "qs";
 
@@ -70,7 +71,7 @@ interface NewsDashboardProps {
 
 const TEXTS = {
    id: {
-      readMoreLink: "Selengkapnya",
+      readMoreLink: "Lihat Semua", // Update Teks
       title: "Berita Terkini",
       newest: "Terbaru",
       oldest: "Terlama",
@@ -79,7 +80,7 @@ const TEXTS = {
       noData: "Tidak ada berita ditemukan."
    },
    en: {
-      readMoreLink: "View All News",
+      readMoreLink: "View All", // Update Teks
       title: "Latest News",
       newest: "Newest",
       oldest: "Oldest",
@@ -120,7 +121,6 @@ export default function NewsDashboard({ initialData, locale, isHomePage = false 
       return "text-white";
    };
 
-   // Helper untuk mendapatkan Hex Code dari Map
    const getBgColor = (colorKey: string | undefined) => {
       if (colorKey && COLOR_MAP[colorKey]) {
          return COLOR_MAP[colorKey];
@@ -202,12 +202,20 @@ export default function NewsDashboard({ initialData, locale, isHomePage = false 
          <div className="container mx-auto px-4 md:px-12 lg:px-24">
 
             {/* HEADER */}
-            <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+            <div className="flex flex-row justify-between items-center mb-8 gap-4 border-b border-gray-100 pb-4">
                <h2 className="text-2xl md:text-3xl font-bold text-[#005320] border-l-4 border-yellow-400 pl-4">
                   {t.title}
                </h2>
 
-               {!isHomePage && (
+               {/* BUTTON LIHAT SEMUA (DESKTOP) */}
+               {isHomePage ? (
+                  <Link
+                     href={`/${locale}/informasi/berita`}
+                     className="hidden md:flex items-center gap-2 text-sm font-bold text-green-700 hover:text-green-800 transition-colors bg-green-50 px-4 py-2 rounded-full hover:bg-green-100"
+                  >
+                     {t.readMoreLink} <FaArrowLeft className="rotate-180" />
+                  </Link>
+               ) : (
                   <div className="flex items-center gap-2 bg-gray-50 px-4 py-1.5 rounded-full border border-gray-200">
                      <Filter size={14} className="text-gray-500" />
                      <select
@@ -242,8 +250,6 @@ export default function NewsDashboard({ initialData, locale, isHomePage = false 
                                     className="object-cover transition-transform duration-700 group-hover/main:scale-105"
                                  />
 
-                                 {/* BADGE KATEGORI */}
-                                 {/* PERBAIKAN: Mengganti 'rounded-full' menjadi 'rounded' agar sama dengan kotak kecil */}
                                  <span
                                     className={`absolute top-3 left-3 px-3 py-1 rounded text-xs font-bold shadow-md ${getTextColor(mainNews.category?.color)}`}
                                     style={{ backgroundColor: getBgColor(mainNews.category?.color) }}
@@ -251,7 +257,6 @@ export default function NewsDashboard({ initialData, locale, isHomePage = false 
                                     {mainNews.category?.name || "Umum"}
                                  </span>
 
-                                 {/* TANGGAL (Overlay) */}
                                  <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-sm text-white px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium flex items-center gap-2 shadow-sm border border-white/10">
                                     <Calendar size={14} />
                                     <span>{formatDate(mainNews.publishedAt)}</span>
@@ -294,8 +299,6 @@ export default function NewsDashboard({ initialData, locale, isHomePage = false 
                                     </h4>
 
                                     <div className="flex flex-wrap items-center gap-2 mt-auto">
-
-                                       {/* Badge Kategori Samping */}
                                        <span
                                           className={`px-2 py-1 rounded text-[10px] font-bold ${getTextColor(item.category?.color)}`}
                                           style={{ backgroundColor: getBgColor(item.category?.color) }}
@@ -307,7 +310,6 @@ export default function NewsDashboard({ initialData, locale, isHomePage = false 
                                           <Calendar size={10} />
                                           {formatDate(item.publishedAt)}
                                        </div>
-
                                     </div>
                                  </div>
                               </Link>
@@ -316,7 +318,7 @@ export default function NewsDashboard({ initialData, locale, isHomePage = false 
                      </div>
                   )}
 
-                  {/* GRID BAWAH (Jika BUKAN Homepage) */}
+                  {/* GRID BAWAH (Hanya jika BUKAN Homepage) */}
                   {!isHomePage && gridNews.length > 0 && (
                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
                         {gridNews.map((item) => (
@@ -332,7 +334,6 @@ export default function NewsDashboard({ initialData, locale, isHomePage = false 
                                     fill
                                     className="object-cover group-hover:scale-105 transition-transform duration-500"
                                  />
-                                 {/* Badge Kategori Grid */}
                                  <span
                                     className={`absolute top-2 left-2 px-2 py-1 rounded text-[10px] font-bold shadow-sm ${getTextColor(item.category?.color)}`}
                                     style={{ backgroundColor: getBgColor(item.category?.color) }}
@@ -363,16 +364,17 @@ export default function NewsDashboard({ initialData, locale, isHomePage = false 
                   {/* FOOTER ACTIONS */}
                   <div className="mt-8 flex w-full">
                      {isHomePage ? (
-                        <div className="w-full flex justify-end">
+                        // --- BUTTON MOBILE ONLY (DI TENGAH) ---
+                        <div className="w-full flex justify-center md:hidden">
                            <Link
                               href={`/${locale}/informasi/berita`}
-                              className="group flex items-center gap-2 text-[#005320] font-bold text-base md:text-lg hover:text-[#003d17] transition-colors"
+                              className="inline-flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 rounded-full text-sm font-bold text-gray-700 shadow-sm"
                            >
-                              <span>{t.readMoreLink}</span>
-                              <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                              {t.readMoreLink} <FaArrowLeft className="rotate-180" />
                            </Link>
                         </div>
                      ) : (
+                        // --- LOAD MORE BUTTON ---
                         hasMore && (
                            <div className="w-full flex justify-center py-2 relative">
                               <div className="absolute inset-0 flex items-center pointer-events-none">

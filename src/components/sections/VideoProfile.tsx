@@ -19,7 +19,7 @@ interface VideoProfileProps {
 }
 
 export default function VideoProfile({ data = [] }: VideoProfileProps) {
-   // 1. HOOKS WAJIB DIATAS (JANGAN ADA RETURN DI SINI)
+   // 1. HOOKS
    const [current, setCurrent] = useState(0);
    const [isPlaying, setIsPlaying] = useState(true);
    const [progress, setProgress] = useState(0);
@@ -27,24 +27,31 @@ export default function VideoProfile({ data = [] }: VideoProfileProps) {
 
    const videoRef = useRef<HTMLVideoElement>(null);
 
-   // 2. USE EFFECT JUGA HARUS DIATAS RETURN
+   // Helper untuk membatasi teks
+   const truncateText = (text: string, maxLength: number) => {
+      if (!text) return "";
+      if (text.length <= maxLength) return text;
+      return text.substring(0, maxLength) + "...";
+   };
+
+   // 2. EFFECT
    useEffect(() => {
       if (videoRef.current) {
          videoRef.current.load();
-         videoRef.current.play()
+         videoRef.current
+            .play()
             .then(() => setIsPlaying(true))
-            .catch(e => {
+            .catch((e) => {
                console.log("Autoplay blocked:", e);
                setIsPlaying(false);
             });
       }
    }, [current]);
 
-   // 3. BARU LAKUKAN PENGECEKAN DATA KOSONG (EARLY RETURN)
-   // Pindahkan ini ke sini (setelah semua hooks)
+   // 3. EARLY RETURN
    if (!data || data.length === 0) return null;
 
-   // 4. LOGIKA & HELPER
+   // 4. LOGIC
    const activeSlide = data[current];
 
    const nextSlide = () => {
@@ -95,7 +102,7 @@ export default function VideoProfile({ data = [] }: VideoProfileProps) {
    const onPlayHandler = () => setIsPlaying(true);
    const onPauseHandler = () => setIsPlaying(false);
 
-   // 5. RENDER JSX
+   // 5. RENDER
    return (
       <section className="relative w-full h-[500px] md:h-[600px] bg-black overflow-hidden group">
 
@@ -121,20 +128,47 @@ export default function VideoProfile({ data = [] }: VideoProfileProps) {
 
          {/* KONTEN TEKS */}
          <div className="absolute inset-0 flex flex-col justify-center px-8 md:px-16 lg:px-24 z-10 pb-40">
-            <div key={activeSlide.id} className="max-w-2xl space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div
+               key={activeSlide.id}
+               className="max-w-2xl space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700"
+            >
                <h1 className="text-3xl md:text-5xl font-bold text-white leading-tight drop-shadow-2xl">
                   {activeSlide.header}
                </h1>
+
                <p className="text-gray-200 text-base md:text-lg leading-relaxed drop-shadow-lg">
-                  {activeSlide.description}
+                  {truncateText(activeSlide.description, 150)}
                </p>
+
                <div>
+                  {/* --- UPDATE STYLE TOMBOL DI SINI --- */}
                   <button
                      onClick={openFullVideo}
-                     className="px-8 py-3 bg-[#005700] hover:bg-[#004200] text-white rounded-full font-medium transition-all shadow-[0_0_20px_rgba(0,87,0,0.5)] border border-green-500/30 flex items-center gap-2 group/btn w-fit hover:scale-105 active:scale-95"
+                     className="
+                px-8 py-3 
+                bg-transparent 
+                hover:bg-white/20 
+                border border-white 
+                text-white 
+                rounded-full 
+                font-medium 
+                transition-all 
+                backdrop-blur-sm
+                flex items-center gap-2 
+                group/btn w-fit 
+                hover:scale-105 active:scale-95
+              "
                   >
-                     <span>{activeSlide.youtubeId ? "Tonton Video Lengkap" : "Selengkapnya"}</span>
-                     {activeSlide.youtubeId ? <Play size={16} fill="currentColor" /> : <ChevronRight className="w-4 h-4" />}
+                     <span>
+                        {activeSlide.youtubeId
+                           ? "Tonton Video Lengkap"
+                           : "Selengkapnya"}
+                     </span>
+                     {activeSlide.youtubeId ? (
+                        <Play size={16} fill="currentColor" />
+                     ) : (
+                        <ChevronRight className="w-4 h-4" />
+                     )}
                   </button>
                </div>
             </div>
@@ -150,27 +184,46 @@ export default function VideoProfile({ data = [] }: VideoProfileProps) {
                         <div
                            key={item.id}
                            onClick={() => goToSlide(index)}
-                           className={`cursor-pointer group/item transition-all duration-300 ${isActive ? 'opacity-100' : 'opacity-60 hover:opacity-90'}`}
+                           className={`cursor-pointer group/item transition-all duration-300 ${isActive ? "opacity-100" : "opacity-60 hover:opacity-90"
+                              }`}
                         >
                            <div className="flex items-center justify-between mb-2">
-                              <span className={`text-sm md:text-base font-bold tracking-wide drop-shadow-md ${isActive ? 'text-white' : 'text-gray-300'}`}>
+                              <span
+                                 className={`text-sm md:text-base font-bold tracking-wide drop-shadow-md ${isActive ? "text-white" : "text-gray-300"
+                                    }`}
+                              >
                                  {item.videoTitle}
                               </span>
                               {isActive && (
-                                 <button onClick={(e) => { e.stopPropagation(); togglePlay(); }} className="text-[#005700] hover:text-green-400 bg-white/10 rounded-full p-1">
-                                    {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
+                                 <button
+                                    onClick={(e) => {
+                                       e.stopPropagation();
+                                       togglePlay();
+                                    }}
+                                    className="text-[#005700] hover:text-green-400 bg-white/10 rounded-full p-1"
+                                 >
+                                    {isPlaying ? (
+                                       <Pause size={18} fill="currentColor" />
+                                    ) : (
+                                       <Play size={18} fill="currentColor" />
+                                    )}
                                  </button>
                               )}
                            </div>
                            <div className="relative h-[3px] w-full bg-gray-600/50 rounded-full overflow-hidden backdrop-blur-sm">
                               <div className="absolute inset-0 bg-white/10"></div>
                               {isActive && (
-                                 <div className="absolute left-0 top-0 h-full bg-[#005700] shadow-[0_0_10px_#005700]" style={{ width: `${progress}%` }}></div>
+                                 <div
+                                    className="absolute left-0 top-0 h-full bg-[#005700] shadow-[0_0_10px_#005700]"
+                                    style={{ width: `${progress}%` }}
+                                 ></div>
                               )}
                            </div>
                            <div className="mt-1 text-[10px] text-gray-400 font-mono text-left drop-shadow-sm">
                               {isActive ? (
-                                 <span className="text-green-400 animate-pulse">● Sedang Diputar</span>
+                                 <span className="text-green-400 animate-pulse">
+                                    ● Sedang Diputar
+                                 </span>
                               ) : (
                                  <span>Klik untuk memutar</span>
                               )}
@@ -200,10 +253,12 @@ export default function VideoProfile({ data = [] }: VideoProfileProps) {
                      allowFullScreen
                   ></iframe>
                </div>
-               <div className="absolute inset-0 -z-10" onClick={closeModal}></div>
+               <div
+                  className="absolute inset-0 -z-10"
+                  onClick={closeModal}
+               ></div>
             </div>
          )}
-
       </section>
    );
 }

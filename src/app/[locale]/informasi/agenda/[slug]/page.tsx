@@ -5,7 +5,7 @@ import Link from "next/link";
 import { fetchAPI } from "@/lib/strapi/fetcher";
 import { getStrapiMedia } from "@/lib/strapi/utils";
 import AgendaCard from "@/components/features/AgendaCard";
-import ShareButton from "@/components/features/ShareButton"; // Pastikan import dari 'features'
+import ShareButton from "@/components/features/ShareButton";
 import PosterLightBox from "@/components/ui/PosterLightBox";
 import { BlocksRenderer } from "@strapi/blocks-react-renderer";
 
@@ -255,9 +255,11 @@ export default async function AgendaDetailPage({
                 )}
               </div>
 
-              {/* SHARE DI KANAN BAWAH (Seperti Berita) */}
-              <div className="mt-auto pt-8 border-t border-gray-200 flex justify-end">
-                <ShareButton title={title || "Agenda"} />
+              {/* SHARE DI KANAN BAWAH */}
+              <div className="mt-auto pt-8 border-t border-gray-100">
+                <div className="flex justify-end">
+                  <ShareButton title={title || "Agenda"} />
+                </div>
               </div>
 
             </div>
@@ -265,16 +267,19 @@ export default async function AgendaDetailPage({
         </div>
       </div>
 
-      {/* --- FOOTER: AGENDA LAINNYA --- */}
-      <div className="container mx-auto px-4 mt-16 mb-20">
-        <div className="flex items-center justify-between mb-8 border-b border-gray-200 pb-4">
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-            <span className="w-2 h-8 bg-green-600 rounded-full"></span>
+      {/* --- FOOTER: AGENDA LAINNYA (UPDATED STYLE) --- */}
+      <div className="container mx-auto px-4 max-w-6xl mt-16 mb-20">
+
+        {/* HEADER SECTION - SAMA DENGAN NEWS DASHBOARD */}
+        <div className="flex flex-row justify-between items-end mb-8 gap-4 border-b border-gray-200 pb-4">
+          <h2 className="text-2xl md:text-3xl font-bold text-[#005320] border-l-4 border-yellow-400 pl-4 leading-none">
             Agenda Lainnya
           </h2>
+
+          {/* Tombol Desktop */}
           <Link
             href={`/${locale}/informasi/agenda`}
-            className="hidden md:flex items-center gap-2 text-sm font-bold text-green-700 hover:text-green-800 transition-colors bg-green-50 px-4 py-2 rounded-full hover:bg-green-100"
+            className="hidden md:flex items-center gap-2 text-sm font-bold text-green-700 hover:text-green-800 transition-colors bg-green-50 px-4 py-2 rounded-full hover:bg-green-100 shrink-0"
           >
             Lihat Semua <FaArrowLeft className="rotate-180" />
           </Link>
@@ -295,10 +300,11 @@ export default async function AgendaDetailPage({
           </div>
         )}
 
-        <div className="mt-8 text-center md:hidden">
+        {/* Tombol Mobile */}
+        <div className="mt-8 flex justify-center md:hidden">
           <Link
             href={`/${locale}/informasi/agenda`}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 rounded-full text-sm font-bold text-gray-700 shadow-sm"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 rounded-full text-sm font-bold text-gray-700 shadow-sm hover:bg-gray-50"
           >
             Lihat Semua Agenda <FaArrowLeft className="rotate-180" />
           </Link>
