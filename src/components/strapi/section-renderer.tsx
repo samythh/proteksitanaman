@@ -4,7 +4,7 @@
 
 import { getStrapiMedia } from "@/lib/strapi/utils";
 
-// Components Imports (Existing)
+// --- EXISTING COMPONENTS IMPORTS ---
 import HeroSlider from "@/components/sections/HeroSlider";
 import QuickAccess from "@/components/sections/QuickAccess";
 import VideoProfile, { VideoSlide } from "@/components/sections/VideoProfile";
@@ -16,20 +16,22 @@ import PartnershipSection, { PartnerItemData } from "@/components/sections/Partn
 import VisitorStats from "@/components/sections/VisitorStats";
 import OtherLinkSection, { LinkItemData } from "@/components/sections/OtherLinkSection";
 import FAQSection from "@/components/sections/FAQSection";
-
-// --- IMPORT BARU ---
 import PageHeader from "@/components/ui/PageHeader";
 import RichText from "@/components/sections/RichText";
 
-// --- IMPORT AGENDA (TAMBAHAN) ---
-import AgendaPreview from "@/components/sections/AgendaPreview"; // <--- 1. Import Komponen
-import { Agenda } from "@/types/agenda"; // <--- 2. Import Tipe Data
+// --- NEW COMPONENTS IMPORTS ---
+import AgendaPreview from "@/components/sections/AgendaPreview";
+import VisiMisiSection from "@/components/sections/VisiMisiSection";
+import LeadersSection from "@/components/sections/LeadersSection"; // ✅ UNCOMMENT INI
+
+// --- TYPE DEFINITIONS ---
+import { Agenda } from "@/types/agenda";
 
 interface GlobalData {
    articles?: NewsItem[];
    locale?: string;
    globalHeroUrl?: string;
-   latestEvents?: Agenda[]; // <--- 3. Daftarkan di Interface
+   latestEvents?: Agenda[];
 }
 
 interface SectionRendererProps {
@@ -48,7 +50,7 @@ export default function SectionRenderer({
 
       switch (section.__component) {
 
-         // --- 1. PAGE HEADER ---
+         // 1. PAGE HEADER
          case "layout.page-header": {
             const specificImg = section.backgroundImage?.url || section.backgroundImage?.data?.attributes?.url;
             const finalBg = specificImg || globalData?.globalHeroUrl;
@@ -65,23 +67,32 @@ export default function SectionRenderer({
             );
          }
 
-         // --- 2. RICH TEXT ---
+         // 2. RICH TEXT
          case "sections.rich-text":
          case "layout.rich-text":
             return <RichText key={index} data={section} />;
 
-         // --- 3. AGENDA PREVIEW (TAMBAHAN) ---
+         // 3. VISI MISI SECTION
+         case "sections.visi-misi-section":
+            return <VisiMisiSection key={index} data={section} />;
+
+         // 4. LEADERS SECTION (BARU)
+         case "sections.leaders-section":
+            return <LeadersSection key={index} data={section} />; // ✅ TAMBAHKAN INI
+
+         // 5. AGENDA PREVIEW
          case "sections.agenda-preview":
             return (
                <AgendaPreview
                   key={index}
-                  data={section} // Config Judul/Link dari Strapi
-                  events={globalData?.latestEvents || []} // Data Event dari page.tsx
+                  data={section}
+                  events={globalData?.latestEvents || []}
                   locale={globalData?.locale || "id"}
                />
             );
 
-         // --- EXISTING COMPONENTS ---
+         // --- EXISTING COMPONENTS LAINNYA ---
+
          case "sections.hero-slider":
             return <HeroSlider key={index} data={section} />;
 
@@ -175,8 +186,9 @@ export default function SectionRenderer({
          case "sections.faq-section":
             return <FAQSection key={index} data={section} />;
 
+         // DEFAULT
          default:
-            console.warn(`Komponen Strapi tidak dikenal: ${section.__component}`);
+            console.warn(`Komponen Strapi tidak dikenal atau belum diimplementasikan: ${section.__component}`);
             return null;
       }
    });

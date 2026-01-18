@@ -1,21 +1,22 @@
 // File: src/app/[locale]/[slug]/page.tsx
+
 import { notFound } from "next/navigation";
 import { fetchAPI } from "@/lib/strapi/fetcher";
 import SectionRenderer from "@/components/strapi/section-renderer";
 
-// --- TYPES DEFINITION ---
+// --- TYPE IMPORTS ---
+import { NewsItem } from "@/components/sections/NewsDashboard";
+import { Agenda } from "@/types/agenda";
 
+// --- TYPES DEFINITION ---
 interface StrapiImage {
    url?: string;
    data?: { attributes?: { url?: string } };
 }
 
-// Tipe untuk Blocks/Sections (Dynamic Zone)
-// Kita menggunakan 'any' secara eksplisit di sini karena struktur blok Strapi sangat variatif
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type StrapiBlock = any;
 
-// Interface untuk menampung data halaman yang sudah dinormalisasi
 interface PageData {
    slug?: string;
    blocks?: StrapiBlock[];
@@ -23,7 +24,6 @@ interface PageData {
       slug?: string;
       blocks?: StrapiBlock[];
    };
-   // Mengizinkan properti lain (index signature) untuk fleksibilitas data Strapi
    // eslint-disable-next-line @typescript-eslint/no-explicit-any
    [key: string]: any;
 }
@@ -34,10 +34,8 @@ export async function generateStaticParams() {
          fields: ["slug"],
          pagination: { limit: -1 },
       });
-
       const params = [];
       const locales = ["id", "en"];
-
       if (pages?.data) {
          // eslint-disable-next-line @typescript-eslint/no-explicit-any
          for (const page of pages.data as any[]) {
@@ -61,66 +59,108 @@ export default async function DynamicPage({
 }) {
    const { slug, locale } = await params;
 
-   // --- FETCH DATA ---
-   // PERBAIKAN: Mengganti 'any' dengan interface PageData atau null
    let pageData: PageData | null = null;
-   let globalHeroUrl: string | undefined = undefined;
 
+   let globalHeroUrl: string | undefined = undefined;
+   let articles: NewsItem[] = [];
+   let latestEvents: Agenda[] = [];
+
+   // ==========================================
+   // TAHAP 1: FETCH HALAMAN UTAMA (WAJIB)
+   // ==========================================
    try {
-      const [pageRes, globalRes] = await Promise.all([
-         // A. Ambil Halaman berdasarkan Slug
-         fetchAPI("/pages", {
-            filters: { slug: { $eq: slug } },
-            populate: {
-               blocks: {
-                  populate: "*"
+      const pageRes = await fetchAPI("/pages", {
+         filters: { slug: { $eq: slug } },
+         locale: locale,
+         populate: {
+            blocks: {
+               on: {
+                  "layout.page-header": { populate: "*" },
+                  "sections.rich-text": { populate: "*" },
+                  "sections.visi-misi-section": {
+                     populate: { programs: { populate: "*" } }
+                  },
+                  "sections.leaders-section": {
+                     populate: {
+                        groups: {
+                           populate: {
+                              current_leader: { populate: "*" },
+                              past_leaders: { populate: "*" }
+                           }
+                        }
+                     }
+                  },
                },
             },
-            locale: locale,
-         }),
-
-         // B. Ambil Global Config
-         fetchAPI("/global", {
-            populate: "Default_Hero_Image",
-            locale: locale,
-         }),
-      ]);
+         },
+      });
 
       if (!pageRes.data || pageRes.data.length === 0) {
+         console.error(`[DynamicPage] Page not found for slug: ${slug}`);
          return notFound();
       }
 
       const rawPage = pageRes.data[0];
-
-      // Normalisasi: Handle Strapi v4 (attributes) vs v5 (flat)
       pageData = rawPage.attributes ? rawPage.attributes : rawPage;
 
-      const globalImg = globalRes?.data?.Default_Hero_Image as StrapiImage | undefined;
-      globalHeroUrl = globalImg?.url || globalImg?.data?.attributes?.url;
-
    } catch (error) {
-      console.error("[DynamicPage] Error:", error);
+      console.error("[DynamicPage] CRITICAL ERROR fetching Page:", error);
       return notFound();
    }
 
-   // Normalisasi Blocks
+   // ==========================================
+   // TAHAP 2: FETCH DATA PENDUKUNG (OPSIONAL)
+   // ==========================================
+   try {
+      const [globalRes, newsRes, eventRes] = await Promise.all([
+         fetchAPI("/global", {
+            populate: "Default_Hero_Image",
+            locale: locale,
+         }).catch(() => null),
+
+         fetchAPI("/articles", {
+            locale: locale,
+            pagination: { limit: 5 },
+            populate: { cover: { fields: ["url"] }, category: { fields: ["name", "color"] } },
+         }).catch(() => ({ data: [] })),
+
+         fetchAPI("/events", {
+            locale: locale,
+            pagination: { limit: 4 },
+            populate: { image: { fields: ["url"] }, tags: { populate: "*" } },
+         }).catch(() => ({ data: [] })),
+      ]);
+
+      const globalImg = globalRes?.data?.Default_Hero_Image as StrapiImage | undefined;
+      globalHeroUrl = globalImg?.url || globalImg?.data?.attributes?.url;
+      articles = newsRes?.data || [];
+      latestEvents = eventRes?.data || [];
+
+   } catch (error) {
+      console.warn("Non-critical data fetch failed:", error);
+   }
+
+   // ==========================================
+   // RENDER HALAMAN
+   // ==========================================
    const sections = pageData?.blocks || pageData?.attributes?.blocks || [];
 
    const globalDataForRenderer = {
       locale: locale,
       globalHeroUrl: globalHeroUrl,
-      articles: []
+      articles: articles,
+      latestEvents: latestEvents
    };
 
    return (
-      <main className="min-h-screen bg-white pb-20 -mt-20 md:-mt-24">
-         {/* Pastikan SectionRenderer menerima data yang sesuai.
-         Biasanya SectionRenderer menangani 'any' untuk props sections.
-      */}
+      // ✅ REVISI:
+      // -mt-14 md:-mt-16 : Menarik konten ke atas sekitar 56px-64px untuk menutup gap.
+      // relative z-10    : Memastikan konten tetap di atas background default jika ada.
+      <div className="w-full bg-white pb-20 -mt-14 md:-mt-16 relative z-10">
          <SectionRenderer
             sections={sections}
             globalData={globalDataForRenderer}
          />
-      </main>
+      </div>
    );
 }
