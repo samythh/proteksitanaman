@@ -1,6 +1,7 @@
 {
    "Metadata": {
-      "title": "Departemen Proteksi Tanaman"
+      "title": "Departemen Proteksi Tanaman",
+      "facilities_title": "Fasilitas"
    },
    "HomePage": {
       "title": "Beranda",
@@ -17,5 +18,13 @@
    "News": {
       "read_more": "Baca Selengkapnya",
       "no_news": "Belum ada berita"
+   },
+   "FacilitiesPage": {
+      "title": "Fasilitas Departemen",
+      "breadcrumb_home": "Beranda",
+      "breadcrumb_profile": "Profil",
+      "breadcrumb_facilities": "Fasilitas",
+      "section_title": "Daftar Sarana & Prasarana",
+      "section_subtitle": "Penunjang Akademik"
    }
 }

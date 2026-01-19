@@ -1,6 +1,7 @@
 {
    "Metadata": {
-      "title": "Department of Plant Protection"
+      "title": "Department of Plant Protection",
+      "facilities_title": "Facilities"
    },
    "HomePage": {
       "title": "Home",
@@ -17,5 +18,13 @@
    "News": {
       "read_more": "Read More",
       "no_news": "No news available"
+   },
+   "FacilitiesPage": {
+      "title": "Department Facilities",
+      "breadcrumb_home": "Home",
+      "breadcrumb_profile": "Profile",
+      "breadcrumb_facilities": "Facilities",
+      "section_title": "Facilities & Infrastructure",
+      "section_subtitle": "Academic Support"
    }
-}  
+}

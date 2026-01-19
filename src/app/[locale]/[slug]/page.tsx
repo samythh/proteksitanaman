@@ -75,8 +75,12 @@ export default async function DynamicPage({
          populate: {
             blocks: {
                on: {
+                  // --- 1. LAYOUT & TEXT ---
                   "layout.page-header": { populate: "*" },
+                  // HANYA GUNAKAN SATU JENIS RICH TEXT YANG VALID DI STRAPI
                   "sections.rich-text": { populate: "*" },
+
+                  // --- 2. EXISTING SECTIONS ---
                   "sections.visi-misi-section": {
                      populate: { programs: { populate: "*" } }
                   },
@@ -90,6 +94,33 @@ export default async function DynamicPage({
                         }
                      }
                   },
+
+                  // --- 3. NEW COMPONENTS (WAJIB ADA) ---
+
+                  // A. Fasilitas List
+                  "sections.facilities-list-section": { populate: "*" },
+
+                  // B. Image Section (Sertifikat/Bagan)
+                  "sections.image-section": {
+                     populate: {
+                        image: { fields: ["url", "alternativeText", "width", "height"] }
+                     }
+                  },
+
+                  // C. Agenda Preview
+                  "sections.agenda-preview": { populate: "*" },
+
+                  // --- 4. OTHER OPTIONAL SECTIONS ---
+                  "sections.accreditation": { populate: { certificates: { populate: "*" } } },
+                  "sections.stats": { populate: { items: { populate: "*" } } },
+                  "sections.welcome-section": { populate: { profiles: { populate: "*" } } },
+                  "sections.video-profile": { populate: { slides: { populate: "*" } } },
+                  "sections.other-link-section": { populate: { items: { populate: "*" } } },
+                  "sections.faq-section": { populate: { items: { populate: "*" } } },
+                  "sections.partnership": { populate: { items: { populate: "*" } } },
+                  "sections.hero-slider": { populate: { slides: { populate: "*" } } },
+                  "sections.news-section": { populate: "*" },
+                  "sections.visitor-stats": { populate: { background_pattern: { fields: ["url"] } } },
                },
             },
          },
@@ -153,9 +184,6 @@ export default async function DynamicPage({
    };
 
    return (
-      // ✅ REVISI:
-      // -mt-14 md:-mt-16 : Menarik konten ke atas sekitar 56px-64px untuk menutup gap.
-      // relative z-10    : Memastikan konten tetap di atas background default jika ada.
       <div className="w-full bg-white pb-20 -mt-14 md:-mt-16 relative z-10">
          <SectionRenderer
             sections={sections}

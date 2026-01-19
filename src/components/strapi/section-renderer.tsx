@@ -22,7 +22,9 @@ import RichText from "@/components/sections/RichText";
 // --- NEW COMPONENTS IMPORTS ---
 import AgendaPreview from "@/components/sections/AgendaPreview";
 import VisiMisiSection from "@/components/sections/VisiMisiSection";
-import LeadersSection from "@/components/sections/LeadersSection"; // ✅ UNCOMMENT INI
+import LeadersSection from "@/components/sections/LeadersSection";
+import FacilitiesListSection from "@/components/sections/FacilitiesListSection";
+import ImageSection from "@/components/sections/ImageSection"; // ✅ NEW: Global Image Section
 
 // --- TYPE DEFINITIONS ---
 import { Agenda } from "@/types/agenda";
@@ -72,15 +74,29 @@ export default function SectionRenderer({
          case "layout.rich-text":
             return <RichText key={index} data={section} />;
 
-         // 3. VISI MISI SECTION
+         // 3. IMAGE SECTION (GLOBAL - SERTIFIKAT/BAGAN/DENAH) ✅
+         case "sections.image-section":
+            return <ImageSection key={index} data={section} />;
+
+         // 4. VISI MISI SECTION
          case "sections.visi-misi-section":
             return <VisiMisiSection key={index} data={section} />;
 
-         // 4. LEADERS SECTION (BARU)
+         // 5. LEADERS SECTION
          case "sections.leaders-section":
-            return <LeadersSection key={index} data={section} />; // ✅ TAMBAHKAN INI
+            return <LeadersSection key={index} data={section} />;
 
-         // 5. AGENDA PREVIEW
+         // 6. FACILITIES LIST SECTION
+         case "sections.facilities-list-section":
+            return (
+               <FacilitiesListSection 
+                  key={index} 
+                  data={section} 
+                  locale={globalData?.locale || "id"} // <-- Tambahkan baris ini
+               />
+            );
+
+         // 7. AGENDA PREVIEW
          case "sections.agenda-preview":
             return (
                <AgendaPreview
@@ -129,6 +145,8 @@ export default function SectionRenderer({
             }));
             return <StatsSection key={index} data={statsData} />;
 
+         // Note: AccreditationSection masih bisa dipertahankan untuk legacy support
+         // Tapi untuk data baru, gunakan sections.image-section
          case "sections.accreditation":
             const certData: CertificateItemData[] = section.certificates.map((item: any) => ({
                id: item.id,
