@@ -24,9 +24,11 @@ interface AgendaAttributes {
     };
     url?: string;
   };
-  tags?: {
-    data: Tag[];
-  } | Tag[];
+  tags?:
+    | {
+        data: Tag[];
+      }
+    | Tag[];
 }
 
 // Interface fleksibel untuk menangani struktur Strapi (Nested / Flat)
@@ -59,7 +61,7 @@ export default function AgendaCard({ data, locale }: AgendaCardProps) {
   const imgUrl =
     getStrapiMedia(image?.data?.attributes?.url || image?.url) ||
     "/images/placeholder-agenda.jpg";
-
+  console.log("AgendaCard Image URL:", imgUrl);
   // Format Tanggal
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return "-";
@@ -69,7 +71,7 @@ export default function AgendaCard({ data, locale }: AgendaCardProps) {
         day: "numeric",
         month: "long",
         year: "numeric",
-      }
+      },
     );
   };
 
@@ -82,11 +84,11 @@ export default function AgendaCard({ data, locale }: AgendaCardProps) {
   const tagsList: Tag[] = Array.isArray(tags)
     ? tags
     : tags?.data || [
-      { id: 1, attributes: { name: "Terbuka untuk umum" } },
-      { id: 2, attributes: { name: "Sertifikat" } },
-      { id: 3, attributes: { name: "Gratis" } },
-      { id: 4, attributes: { name: "Online" } },
-    ];
+        { id: 1, attributes: { name: "Terbuka untuk umum" } },
+        { id: 2, attributes: { name: "Sertifikat" } },
+        { id: 3, attributes: { name: "Gratis" } },
+        { id: 4, attributes: { name: "Online" } },
+      ];
 
   const visibleTags = tagsList.slice(0, 2);
   const hiddenCount = tagsList.length - 2;
@@ -137,7 +139,7 @@ export default function AgendaCard({ data, locale }: AgendaCardProps) {
               <span
                 key={tag.id}
                 className={`text-[10px] font-semibold px-3 py-1.5 rounded-lg whitespace-nowrap shadow-sm ${getTagStyle(
-                  index
+                  index,
                 )}`}
               >
                 {tag.attributes ? tag.attributes.name : tag.name}
