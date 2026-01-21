@@ -7,6 +7,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { Search, Menu, X, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import SearchBar from "@/components/ui/SearchBar"; // <--- Tambahkan ini
 
 // --- Interfaces ---
 interface SubMenuItem {
@@ -156,7 +157,7 @@ export default function NavbarClient({
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-transform duration-500",
         "bg-[#005320] border-b border-white/10 shadow-md text-white py-4",
-        isVisible ? "translate-y-0" : "-translate-y-full"
+        isVisible ? "translate-y-0" : "-translate-y-full",
       )}
     >
       <div className="container mx-auto flex items-center justify-between px-4">
@@ -251,7 +252,7 @@ export default function NavbarClient({
                 "px-3 py-1 text-xs font-bold rounded-full transition-all",
                 currentLang === "id"
                   ? "bg-yellow-400 text-[#005320]"
-                  : "text-white hover:text-yellow-200"
+                  : "text-white hover:text-yellow-200",
               )}
             >
               ID
@@ -262,16 +263,18 @@ export default function NavbarClient({
                 "px-3 py-1 text-xs font-bold rounded-full transition-all",
                 currentLang === "en"
                   ? "bg-yellow-400 text-[#005320]"
-                  : "text-white hover:text-yellow-200"
+                  : "text-white hover:text-yellow-200",
               )}
             >
               EN
             </button>
           </div>
 
-          <button className="p-2 rounded-full hover:bg-white/15">
-            <Search className="w-5 h-5" />
-          </button>
+          {/* --- SEARCH BAR (DESKTOP) --- */}
+          {/* Tampil di layar besar (lg), sembunyi di mobile */}
+          <div className="hidden lg:block">
+            <SearchBar />
+          </div>
 
           <button
             onClick={() => setMobileMenuOpen(true)}
@@ -291,7 +294,7 @@ export default function NavbarClient({
               "fixed inset-0 z-[60] bg-black/60 lg:hidden transition-opacity duration-300 ease-in-out",
               isClosing
                 ? "opacity-0 pointer-events-none"
-                : "opacity-100 pointer-events-auto"
+                : "opacity-100 pointer-events-auto",
             )}
             onClick={() => setMobileMenuOpen(false)}
             aria-hidden="true"
@@ -301,7 +304,7 @@ export default function NavbarClient({
             className={cn(
               "fixed top-0 right-0 h-screen w-[85%] max-w-[320px] bg-[#005320] shadow-2xl z-[70] flex flex-col lg:hidden ",
               "transition-transform duration-350 ease-in-out",
-              isClosing ? "translate-x-full" : "translate-x-0"
+              isClosing ? "translate-x-full" : "translate-x-0",
             )}
             role="dialog"
             aria-modal="true"
@@ -324,6 +327,10 @@ export default function NavbarClient({
             </div>
 
             <div className="flex-1 overflow-y-auto bg-[#033b19b0] overscroll-contain px-6 py-6">
+              {/* --- SEARCH BAR (MOBILE) --- */}
+              <div className="mb-6 lg:hidden">
+                <SearchBar />
+              </div>
               <ul className="space-y-6">
                 {menuItems.map((item, i) => (
                   <li key={i}>
@@ -380,7 +387,7 @@ export default function NavbarClient({
                     "py-2.5 rounded-lg text-sm font-bold border transition-colors",
                     currentLang === "id"
                       ? "bg-yellow-400 border-yellow-400 text-[#005320]"
-                      : "border-white/20 text-white hover:border-yellow-400"
+                      : "border-white/20 text-white hover:border-yellow-400",
                   )}
                 >
                   INDONESIA
@@ -394,7 +401,7 @@ export default function NavbarClient({
                     "py-2.5 rounded-lg text-sm font-bold border transition-colors",
                     currentLang === "en"
                       ? "bg-yellow-400 border-yellow-400 text-[#005320]"
-                      : "border-white/20 text-white hover:border-yellow-400"
+                      : "border-white/20 text-white hover:border-yellow-400",
                   )}
                 >
                   ENGLISH
