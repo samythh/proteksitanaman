@@ -77,7 +77,6 @@ export default async function DynamicPage({
                on: {
                   // --- 1. LAYOUT & TEXT ---
                   "layout.page-header": { populate: "*" },
-                  // HANYA GUNAKAN SATU JENIS RICH TEXT YANG VALID DI STRAPI
                   "sections.rich-text": { populate: "*" },
 
                   // --- 2. EXISTING SECTIONS ---
@@ -95,19 +94,69 @@ export default async function DynamicPage({
                      }
                   },
 
-                  // --- 3. NEW COMPONENTS (WAJIB ADA) ---
+                  // --- 3. NEW COMPONENTS ---
 
                   // A. Fasilitas List
                   "sections.facilities-list-section": { populate: "*" },
 
-                  // B. Image Section (Sertifikat/Bagan)
+                  // B. Image Section
                   "sections.image-section": {
                      populate: {
                         image: { fields: ["url", "alternativeText", "width", "height"] }
                      }
                   },
 
-                  // C. Agenda Preview
+                  // C. Video Section
+                  "sections.video-section": { populate: "*" },
+
+                  // D. Feature List Section (Capaian Lulusan)
+                  "sections.feature-list-section": {
+                     populate: {
+                        image: { fields: ["url", "alternativeText", "width", "height"] },
+                        items: {
+                           populate: {
+                              icon: { fields: ["url", "alternativeText"] }
+                           }
+                        }
+                     }
+                  },
+
+                  // E. Profile Grid Section (Profil Lulusan / Tim)
+                  "sections.profile-grid-section": {
+                     populate: {
+                        items: {
+                           populate: {
+                              photo: { fields: ["url", "alternativeText", "width", "height"] }
+                           }
+                        }
+                     }
+                  },
+
+                  // F. Curriculum Section (Mata Kuliah Accordion)
+                  "sections.curriculum-section": {
+                     populate: {
+                        items: { // Masuk ke SemesterGroup
+                           populate: {
+                              courses: { // Masuk ke CourseItem
+                                 populate: "*"
+                              }
+                           }
+                        }
+                     }
+                  },
+
+                  // G. Gallery Section (Galeri Foto) ✅ NEW ADDITION
+                  "sections.gallery-section": {
+                     populate: {
+                        items: {
+                           populate: {
+                              image: { fields: ["url", "alternativeText", "width", "height"] }
+                           }
+                        }
+                     }
+                  },
+
+                  // H. Agenda Preview
                   "sections.agenda-preview": { populate: "*" },
 
                   // --- 4. OTHER OPTIONAL SECTIONS ---

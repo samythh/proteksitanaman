@@ -31,8 +31,8 @@ interface ImageField {
 interface ImageSectionData {
    title?: string;
    description?: string;
-   // Menambahkan field alignment dari Strapi
    alignment?: "left" | "center" | "right";
+   image_size?: "small" | "medium" | "large";
    is_lightbox_enabled?: boolean;
    image?: ImageField;
 }
@@ -47,32 +47,44 @@ export default function ImageSection({ data }: ImageSectionProps) {
    // Extract Data
    const title = data.title;
    const desc = data.description;
-   // Default ke 'left' jika kosong
    const alignment = data.alignment || "left";
+   const imageSize = data.image_size || "medium";
    const enableLightbox = data.is_lightbox_enabled !== false;
 
-   // --- CONFIGURATION MAPPING ---
-   // Kita buat mapping class Tailwind berdasarkan alignment agar kode rapi
-   const styles = {
+   // --- 1. CONFIGURATION: ALIGNMENT ---
+   const alignStyles = {
       left: {
-         wrapper: "text-left",                   // Container rata kiri
-         underline: "left-0",                    // Garis judul di kiri
-         descMargin: "mr-auto",                  // Margin kanan auto (agar teks di kiri)
+         wrapper: "text-left",
+         underline: "left-0",
+         descMargin: "mr-auto",
       },
       center: {
-         wrapper: "text-center",                 // Container rata tengah
-         underline: "left-1/2 -translate-x-1/2", // Garis judul di tengah
-         descMargin: "mx-auto",                  // Margin kiri-kanan auto (tengah)
+         wrapper: "text-center",
+         underline: "left-1/2 -translate-x-1/2",
+         descMargin: "mx-auto",
       },
       right: {
-         wrapper: "text-right",                  // Container rata kanan
-         underline: "right-0",                   // Garis judul di kanan
-         descMargin: "ml-auto",                  // Margin kiri auto (agar teks di kanan)
+         wrapper: "text-right",
+         underline: "right-0",
+         descMargin: "ml-auto",
       }
    };
 
-   // Ambil style aktif
-   const activeStyle = styles[alignment];
+   // --- 2. CONFIGURATION: SIZE (UPDATED) ---
+   // Kita sesuaikan ukuran container berdasarkan request Anda
+   const sizeStyles = {
+      // Small: Sangat kecil (Logo/Icon) - Sekitar 200px
+      small: "max-w-[180px] md:max-w-[200px]",
+
+      // Medium: Setengah dari Large - Sekitar 350px - 400px
+      medium: "max-w-[300px] md:max-w-[400px]",
+
+      // Large: Menjadi ukuran Medium sebelumnya (Standar Foto) - Sekitar 700px
+      large: "max-w-[500px] md:max-w-[700px]",
+   };
+
+   const activeAlign = alignStyles[alignment];
+   const activeSize = sizeStyles[imageSize];
 
    // --- LOGIKA PENCARIAN URL ---
    const getImageUrl = (obj: ImageSectionData): string | null | undefined => {
@@ -98,23 +110,20 @@ export default function ImageSection({ data }: ImageSectionProps) {
    return (
       <>
          <section className="container mx-auto px-4 py-8 md:py-12 relative z-10">
-            {/* TERAPKAN ALIGNMENT PADA WRAPPER UTAMA */}
-            <div className={`max-w-4xl mx-auto ${activeStyle.wrapper}`}>
+            <div className={`max-w-4xl mx-auto ${activeAlign.wrapper}`}>
 
                {/* 1. Header Section */}
                {title && (
                   <div className="mb-6">
                      <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 relative inline-block">
                         {title}
-                        {/* Garis Bawah Judul Dinamis */}
-                        <span className={`absolute -bottom-2 w-16 h-1 bg-green-600 rounded-full ${activeStyle.underline}`}></span>
+                        <span className={`absolute -bottom-2 w-16 h-1 bg-green-600 rounded-full ${activeAlign.underline}`}></span>
                      </h2>
                   </div>
                )}
 
                {/* 2. Image Container */}
-               {/* inline-block akan mengikuti text-align dari parent (wrapper) */}
-               <div className="relative group inline-block max-w-full">
+               <div className={`relative group inline-block w-full ${activeSize}`}>
                   <div
                      className={`
                 relative rounded-xl overflow-hidden shadow-lg border border-gray-200 bg-white 
@@ -122,13 +131,13 @@ export default function ImageSection({ data }: ImageSectionProps) {
               `}
                      onClick={() => enableLightbox && setIsOpen(true)}
                   >
-                     <div className="relative w-auto h-auto max-w-full">
+                     <div className="relative w-full h-auto">
                         <Image
                            src={imgUrl}
                            alt={altText}
                            width={imgWidth}
                            height={imgHeight}
-                           className="w-full h-auto max-h-[600px] object-contain bg-gray-50"
+                           className="w-full h-auto object-contain bg-gray-50"
                         />
                      </div>
 
@@ -144,8 +153,7 @@ export default function ImageSection({ data }: ImageSectionProps) {
 
                   {/* 3. Description */}
                   {desc && (
-                     // Gunakan margin dinamis agar deskripsi tidak melebar ke sisi yang salah
-                     <p className={`text-gray-600 mt-4 text-sm md:text-base max-w-2xl leading-relaxed ${activeStyle.descMargin}`}>
+                     <p className={`text-gray-600 mt-4 text-sm md:text-base max-w-2xl leading-relaxed ${activeAlign.descMargin}`}>
                         {desc}
                      </p>
                   )}

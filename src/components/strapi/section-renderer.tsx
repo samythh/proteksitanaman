@@ -24,7 +24,12 @@ import AgendaPreview from "@/components/sections/AgendaPreview";
 import VisiMisiSection from "@/components/sections/VisiMisiSection";
 import LeadersSection from "@/components/sections/LeadersSection";
 import FacilitiesListSection from "@/components/sections/FacilitiesListSection";
-import ImageSection from "@/components/sections/ImageSection"; // ✅ NEW: Global Image Section
+import ImageSection from "@/components/sections/ImageSection";
+import VideoSection from "@/components/sections/VideoSection";
+import FeatureListSection from "@/components/sections/FeatureListSection";
+import ProfileGridSection from "@/components/sections/ProfileGridSection";
+import CurriculumSection from "@/components/sections/CurriculumSection";
+import GallerySection from "@/components/sections/GallerySection"; // ✅ NEW: Import Gallery
 
 // --- TYPE DEFINITIONS ---
 import { Agenda } from "@/types/agenda";
@@ -34,6 +39,7 @@ interface GlobalData {
    locale?: string;
    globalHeroUrl?: string;
    latestEvents?: Agenda[];
+   allFacilities?: any[];
 }
 
 interface SectionRendererProps {
@@ -49,6 +55,9 @@ export default function SectionRenderer({
    if (!sections) return null;
 
    return sections.map((section: any, index: number) => {
+
+      // Debugging optional: Cek nama komponen yang masuk
+      // console.log("Rendering Component:", section.__component);
 
       switch (section.__component) {
 
@@ -74,29 +83,49 @@ export default function SectionRenderer({
          case "layout.rich-text":
             return <RichText key={index} data={section} />;
 
-         // 3. IMAGE SECTION (GLOBAL - SERTIFIKAT/BAGAN/DENAH) ✅
+         // 3. IMAGE SECTION
          case "sections.image-section":
             return <ImageSection key={index} data={section} />;
 
-         // 4. VISI MISI SECTION
+         // 4. VIDEO SECTION
+         case "sections.video-section":
+            return <VideoSection key={index} data={section} />;
+
+         // 5. FEATURE LIST SECTION (Capaian Lulusan)
+         case "sections.feature-list-section":
+            return <FeatureListSection key={index} data={section} />;
+
+         // 6. PROFILE GRID SECTION (Profil Lulusan / Tim / Staff)
+         case "sections.profile-grid-section":
+            return <ProfileGridSection key={index} data={section} />;
+
+         // 7. CURRICULUM SECTION (Mata Kuliah Accordion)
+         case "sections.curriculum-section":
+            return <CurriculumSection key={index} data={section} />;
+
+         // 8. GALLERY SECTION (Galeri Foto) ✅ NEW
+         case "sections.gallery-section":
+            return <GallerySection key={index} data={section} />;
+
+         // 9. VISI MISI SECTION
          case "sections.visi-misi-section":
             return <VisiMisiSection key={index} data={section} />;
 
-         // 5. LEADERS SECTION
+         // 10. LEADERS SECTION
          case "sections.leaders-section":
             return <LeadersSection key={index} data={section} />;
 
-         // 6. FACILITIES LIST SECTION
+         // 11. FACILITIES LIST SECTION
          case "sections.facilities-list-section":
             return (
-               <FacilitiesListSection 
-                  key={index} 
-                  data={section} 
-                  locale={globalData?.locale || "id"} // <-- Tambahkan baris ini
+               <FacilitiesListSection
+                  key={index}
+                  data={section}
+                  locale={globalData?.locale || "id"}
                />
             );
 
-         // 7. AGENDA PREVIEW
+         // 12. AGENDA PREVIEW
          case "sections.agenda-preview":
             return (
                <AgendaPreview
@@ -107,7 +136,7 @@ export default function SectionRenderer({
                />
             );
 
-         // --- EXISTING COMPONENTS LAINNYA ---
+         // --- EXISTING COMPONENTS ---
 
          case "sections.hero-slider":
             return <HeroSlider key={index} data={section} />;
@@ -145,8 +174,6 @@ export default function SectionRenderer({
             }));
             return <StatsSection key={index} data={statsData} />;
 
-         // Note: AccreditationSection masih bisa dipertahankan untuk legacy support
-         // Tapi untuk data baru, gunakan sections.image-section
          case "sections.accreditation":
             const certData: CertificateItemData[] = section.certificates.map((item: any) => ({
                id: item.id,
@@ -204,9 +231,9 @@ export default function SectionRenderer({
          case "sections.faq-section":
             return <FAQSection key={index} data={section} />;
 
-         // DEFAULT
+         // DEFAULT FALLBACK
          default:
-            console.warn(`Komponen Strapi tidak dikenal atau belum diimplementasikan: ${section.__component}`);
+            console.warn(`[SectionRenderer] Unknown component: ${section.__component}`);
             return null;
       }
    });
