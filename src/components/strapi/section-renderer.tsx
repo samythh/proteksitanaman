@@ -30,7 +30,8 @@ import FeatureListSection from "@/components/sections/FeatureListSection";
 import ProfileGridSection from "@/components/sections/ProfileGridSection";
 import CurriculumSection from "@/components/sections/CurriculumSection";
 import GallerySection from "@/components/sections/GallerySection";
-import DocumentSection from "@/components/sections/DocumentSection"; // ✅ NEW: Import Dokumen SOP
+import DocumentSection from "@/components/sections/DocumentSection";
+import PublicationSection from "@/components/sections/PublicationSection"; // ✅ NEW: Import Publikasi
 
 // --- TYPE DEFINITIONS ---
 import { Agenda } from "@/types/agenda";
@@ -108,19 +109,23 @@ export default function SectionRenderer({
          case "sections.gallery-section":
             return <GallerySection key={index} data={section} />;
 
-         // 9. DOCUMENT SECTION (Dokumen & SOP) ✅ NEW
+         // 9. DOCUMENT SECTION (Dokumen & SOP)
          case "sections.document-section":
             return <DocumentSection key={index} data={section} />;
 
-         // 10. VISI MISI SECTION
+         // 10. PUBLICATION SECTION (Publikasi Ilmiah) ✅ NEW
+         case "sections.publication-section":
+            return <PublicationSection key={index} data={section} />;
+
+         // 11. VISI MISI SECTION
          case "sections.visi-misi-section":
             return <VisiMisiSection key={index} data={section} />;
 
-         // 11. LEADERS SECTION
+         // 12. LEADERS SECTION
          case "sections.leaders-section":
             return <LeadersSection key={index} data={section} />;
 
-         // 12. FACILITIES LIST SECTION
+         // 13. FACILITIES LIST SECTION
          case "sections.facilities-list-section":
             return (
                <FacilitiesListSection
@@ -130,7 +135,7 @@ export default function SectionRenderer({
                />
             );
 
-         // 13. AGENDA PREVIEW
+         // 14. AGENDA PREVIEW
          case "sections.agenda-preview":
             return (
                <AgendaPreview

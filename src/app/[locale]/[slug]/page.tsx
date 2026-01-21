@@ -156,7 +156,7 @@ export default async function DynamicPage({
                      }
                   },
 
-                  // H. Document Section (Dokumen & SOP) ✅ NEW ADDITION
+                  // H. Document Section (Dokumen & SOP)
                   "sections.document-section": {
                      populate: {
                         categories: {
@@ -176,7 +176,18 @@ export default async function DynamicPage({
                      }
                   },
 
-                  // I. Agenda Preview
+                  // I. Publication Section (Publikasi Ilmiah) ✅ NEW ADDITION
+                  "sections.publication-section": {
+                     populate: {
+                        items: {
+                           populate: {
+                              image: { fields: ["url", "alternativeText", "width", "height"] }
+                           }
+                        }
+                     }
+                  },
+
+                  // J. Agenda Preview
                   "sections.agenda-preview": { populate: "*" },
 
                   // --- 4. OTHER OPTIONAL SECTIONS ---
