@@ -145,7 +145,7 @@ export default async function DynamicPage({
                      }
                   },
 
-                  // G. Gallery Section (Galeri Foto) ✅ NEW ADDITION
+                  // G. Gallery Section (Galeri Foto)
                   "sections.gallery-section": {
                      populate: {
                         items: {
@@ -156,7 +156,27 @@ export default async function DynamicPage({
                      }
                   },
 
-                  // H. Agenda Preview
+                  // H. Document Section (Dokumen & SOP) ✅ NEW ADDITION
+                  "sections.document-section": {
+                     populate: {
+                        categories: {
+                           populate: {
+                              groups: {
+                                 populate: {
+                                    files: {
+                                       populate: {
+                                          // Ambil URL file, nama, ekstensi, dan ukuran
+                                          file: { fields: ["url", "name", "ext", "size"] }
+                                       }
+                                    }
+                                 }
+                              }
+                           }
+                        }
+                     }
+                  },
+
+                  // I. Agenda Preview
                   "sections.agenda-preview": { populate: "*" },
 
                   // --- 4. OTHER OPTIONAL SECTIONS ---
