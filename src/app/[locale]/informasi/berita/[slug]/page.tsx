@@ -169,7 +169,8 @@ export default async function BeritaDetailPage({ params }: PageProps) {
                </div>
             )}
 
-            <div className="prose prose-lg prose-green max-w-none text-gray-700 leading-relaxed mb-12">
+            {/* ✅ UPDATED: Ditambahkan class 'text-justify' */}
+            <div className="prose prose-lg prose-green max-w-none text-gray-700 leading-relaxed mb-12 text-justify">
                <BlocksRenderer content={article.content} />
             </div>
 
