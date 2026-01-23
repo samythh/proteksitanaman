@@ -30,10 +30,10 @@ const nextConfig = {
       },
       // --- INI YANG PALING PENTING UNTUK ERROR ANDA ---
       {
-        protocol: "http",
-        hostname: "202.10.34.176", // IP Server Strapi
-        port: "1337", // Port Server Strapi
-        pathname: "/uploads/**", // Folder gambar Strapi
+        protocol: "https",
+        hostname: "api.backendn8n.cloud", // <-- Masukkan domain Anda di sini
+        port: "",
+        pathname: "/uploads/**",
       },
     ],
     minimumCacheTTL: 604800,
