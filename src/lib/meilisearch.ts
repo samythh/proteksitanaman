@@ -4,7 +4,7 @@ import { Meilisearch } from "meilisearch";
 // Gunakan Environment Variable agar aman (Opsional, tapi disarankan)
 // Atau hardcode jika untuk development dulu
 const MEILISEARCH_HOST =
-  process.env.NEXT_PUBLIC_MEILISEARCH_HOST || "http://202.10.34.176:7700";
+  process.env.NEXT_PUBLIC_MEILISEARCH_HOST || "https://search.backendn8n.cloud";
 const MEILISEARCH_KEY =
   process.env.NEXT_PUBLIC_MEILISEARCH_SEARCH_KEY ||
   "a5f404f7feb43cff3dcbc982db48e9832ba48a9ef98acc52e2831f0d1e44a15e";
