@@ -1,55 +1,65 @@
 // src/components/features/ArticleCard.tsx
-"use client"; // Pastikan ada ini
+"use client";
 
 import Image from "next/image";
 import Link from "next/link";
 import { format } from "date-fns";
 import { id as idLocale, enUS } from "date-fns/locale";
 
-// Gunakan placeholder online jika file lokal tidak ada, untuk menghindari error 404 fatal
-// Atau ganti ke "/images/placeholder-agenda.jpg" jika file fisik SUDAH ADA.
+// Placeholder aman (HTTPS)
 const PLACEHOLDER_IMAGE = "https://placehold.co/600x400/png?text=No+Image";
 
 export default function ArticleCard({
   data,
   locale,
 }: {
-  data: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: any; // Menggunakan any agar fleksibel (Strapi vs Meilisearch)
   locale: string;
 }) {
-  // 1. Ambil Base URL dari env atau hardcode IP VPS Anda
+  // 1. Ambil Base URL HTTPS yang benar
   const STRAPI_BASE_URL =
-    process.env.NEXT_PUBLIC_STRAPI_URL || "http://202.10.34.176:1337";
+    process.env.NEXT_PUBLIC_STRAPI_API_URL || "https://api.backendn8n.cloud";
 
-  // 2. Normalisasi Data Item
+  // 2. Normalisasi Data Item (Handle Nested vs Flat)
   const item = data.attributes || data;
 
-  // 3. Logika Pencari Gambar (Cari string URL di mana saja)
+  // 3. LOGIKA PENCARI GAMBAR (Super Robust)
+  // Mencari di field 'image' ATAU 'cover', baik bentuk string, object, atau array
   let rawUrl =
-    (typeof item.image === "string" ? item.image : null) || // Cek level 1 (Meilisearch flat)
-    item.image?.url || // Cek level 2 (Strapi plugin default)
-    item.image?.[0]?.url || // Cek array
-    item.image?.data?.attributes?.url || // Cek nested Strapi
+    (typeof item.image === "string" ? item.image : null) ||
+    (typeof item.cover === "string" ? item.cover : null) || // Cek kalau Meilisearch kirim URL string di 'cover'
+    item.image?.url ||
+    item.cover?.url || // Cek field 'cover' (Standard Strapi)
+    item.image?.[0]?.url ||
+    item.cover?.[0]?.url ||
+    item.image?.data?.attributes?.url ||
+    item.cover?.data?.attributes?.url || // Cek nested Strapi di 'cover'
     null;
 
-  // 4. LOGIKA FIX URL (PENTING!)
-  // Jika rawUrl ada isinya, tapi diawali dengan "/", kita tempelkan domain VPS
+  // 4. LOGIKA FIX URL & ANTI MIXED CONTENT
   let finalImageUrl = PLACEHOLDER_IMAGE;
 
   if (rawUrl) {
     if (rawUrl.startsWith("http")) {
-      // Jika sudah ada http (misal gambar eksternal), pakai langsung
-      finalImageUrl = rawUrl;
+      // PENTING: Cek apakah URL ini adalah URL lama (IP Address HTTP)
+      // Jika ya, kita paksa ganti ke Domain HTTPS agar tidak diblokir browser
+      if (rawUrl.includes("202.10.34.176")) {
+        finalImageUrl = rawUrl.replace(
+          "http://202.10.34.176:1337",
+          STRAPI_BASE_URL,
+        );
+      } else {
+        finalImageUrl = rawUrl;
+      }
     } else if (rawUrl.startsWith("/")) {
-      // Jika path relatif (/uploads/...), tempelkan domain VPS
+      // Jika relative path (/uploads/...), tempelkan domain di depannya
       finalImageUrl = `${STRAPI_BASE_URL}${rawUrl}`;
     }
   }
 
-  // DEBUGGING: Cek di Console Browser (F12) untuk melihat hasil URLnya
-  console.log(
-    `[ArticleCard] Judul: ${item.title}, URL Gambar: ${finalImageUrl}`,
-  );
+  // DEBUGGING: Cek Console Browser jika masih penasaran
+  // console.log(`[ArticleCard] Title: ${item.title}, Final: ${finalImageUrl}`);
 
   // 5. Format Tanggal
   const dateObj = item.publishedAt ? new Date(item.publishedAt) : new Date();
@@ -62,7 +72,8 @@ export default function ArticleCard({
   if (typeof item.content === "string") {
     summary = item.content;
   } else if (Array.isArray(item.content) && item.content.length > 0) {
-    const firstBlock = item.content[0];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const firstBlock = item.content[0] as any;
     if (firstBlock.type === "paragraph" && firstBlock.children?.[0]?.text) {
       summary = firstBlock.children[0].text;
     }
@@ -82,7 +93,7 @@ export default function ArticleCard({
           fill
           className="object-cover group-hover:scale-105 transition-transform duration-500"
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          // Fallback jika gambar error load
+          // Tambahkan onError agar aman
           onError={(e) => {
             const target = e.target as HTMLImageElement;
             target.srcset = PLACEHOLDER_IMAGE;
@@ -95,7 +106,7 @@ export default function ArticleCard({
 
       <div className="p-4 flex flex-col flex-grow">
         <div className="text-xs text-gray-500 mb-2 flex items-center gap-1">
-          📅 {dateLabel}
+          {dateLabel}
         </div>
 
         <h3
