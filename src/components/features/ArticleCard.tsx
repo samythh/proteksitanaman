@@ -25,8 +25,8 @@ export default function ArticleCard({
   const item = data.attributes || data;
 
   // 3. LOGIKA PENCARI GAMBAR (Super Robust)
-  // Mencari di field 'image' ATAU 'cover', baik bentuk string, object, atau array
-  let rawUrl =
+  // [PERBAIKAN 1]: Mengubah 'let' menjadi 'const' karena tidak pernah di-reassign
+  const rawUrl =
     (typeof item.image === "string" ? item.image : null) ||
     (typeof item.cover === "string" ? item.cover : null) || // Cek kalau Meilisearch kirim URL string di 'cover'
     item.image?.url ||
@@ -47,7 +47,7 @@ export default function ArticleCard({
       if (rawUrl.includes("202.10.34.176")) {
         finalImageUrl = rawUrl.replace(
           "http://202.10.34.176:1337",
-          STRAPI_BASE_URL,
+          STRAPI_BASE_URL
         );
       } else {
         finalImageUrl = rawUrl;
@@ -57,9 +57,6 @@ export default function ArticleCard({
       finalImageUrl = `${STRAPI_BASE_URL}${rawUrl}`;
     }
   }
-
-  // DEBUGGING: Cek Console Browser jika masih penasaran
-  // console.log(`[ArticleCard] Title: ${item.title}, Final: ${finalImageUrl}`);
 
   // 5. Format Tanggal
   const dateObj = item.publishedAt ? new Date(item.publishedAt) : new Date();
@@ -84,7 +81,10 @@ export default function ArticleCard({
   return (
     <Link
       href={`/${locale}/informasi/berita/${item.slug}`}
-      className="group block bg-white rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col h-full"
+      // [PERBAIKAN 2]: Menghapus class 'block' karena bentrok dengan 'flex'
+      // Sebelum: "group block bg-white ... flex flex-col ..."
+      // Sesudah: "group bg-white ... flex flex-col ..."
+      className="group bg-white rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col h-full"
     >
       <div className="relative h-48 w-full overflow-hidden rounded-t-xl bg-gray-200">
         <Image

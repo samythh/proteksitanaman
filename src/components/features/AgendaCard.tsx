@@ -1,4 +1,4 @@
-// src/components/features/AgendaCard.tsx
+// File: src/components/features/AgendaCard.tsx
 "use client";
 
 import Image from "next/image";
@@ -15,18 +15,9 @@ interface Tag {
   name?: string;
 }
 
-interface AgendaAttributes {
-  title: string;
-  slug: string;
-  startDate: string;
-  endDate: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  image?: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  cover?: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  tags?: any;
-}
+// [PERBAIKAN 2]: Interface 'AgendaAttributes' dihapus karena tidak digunakan.
+// Jika nanti ingin digunakan untuk strict typing, Anda bisa menambahkannya kembali
+// dan menggunakannya di AgendaCardProps.
 
 interface AgendaCardProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -40,13 +31,12 @@ export default function AgendaCard({ data, locale }: AgendaCardProps) {
     process.env.NEXT_PUBLIC_STRAPI_API_URL || "https://api.backendn8n.cloud";
 
   // 2. Normalisasi Data (Handle Nested vs Flat)
-  // Strapi membungkus di 'attributes', Meilisearch biasanya langsung datar
   const item = data.attributes || data;
   const { title, slug, startDate, endDate, tags } = item;
 
   // 3. LOGIKA PENCARI GAMBAR (Super Robust)
-  // Mencari di field 'image' ATAU 'cover', baik bentuk string, object, atau array
-  let rawUrl =
+  // [PERBAIKAN 1]: Mengubah 'let' menjadi 'const' karena variabel ini tidak pernah di-reassign
+  const rawUrl =
     (typeof item.image === "string" ? item.image : null) ||
     (typeof item.cover === "string" ? item.cover : null) ||
     item.image?.url ||
@@ -62,11 +52,10 @@ export default function AgendaCard({ data, locale }: AgendaCardProps) {
   if (rawUrl) {
     if (rawUrl.startsWith("http")) {
       // PENTING: Cek apakah URL ini adalah URL lama (IP Address HTTP)
-      // Jika ya, kita paksa ganti ke Domain HTTPS agar tidak diblokir browser
       if (rawUrl.includes("202.10.34.176")) {
         finalImageUrl = rawUrl.replace(
           "http://202.10.34.176:1337",
-          STRAPI_BASE_URL,
+          STRAPI_BASE_URL
         );
       } else {
         finalImageUrl = rawUrl;
@@ -87,9 +76,10 @@ export default function AgendaCard({ data, locale }: AgendaCardProps) {
           day: "numeric",
           month: "long",
           year: "numeric",
-        },
+        }
       );
-    } catch (e) {
+    } catch { 
+      // [PERBAIKAN 3]: Menghapus '(e)' karena variabel error tidak digunakan
       return "-";
     }
   };
@@ -100,22 +90,18 @@ export default function AgendaCard({ data, locale }: AgendaCardProps) {
     startStr === endStr ? startStr : `${startStr} - ${endStr}`;
 
   // --- LOGIKA TAGS ---
-  // Normalisasi tags agar aman dari error map
   let tagsList: Tag[] = [];
 
   if (Array.isArray(tags)) {
-    // Kasus Meilisearch (biasanya array of strings atau objects)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tagsList = tags.map((t: any, idx: number) => {
-      if (typeof t === "string") return { id: idx, name: t }; // Jika cuma string
-      return t; // Jika object
+      if (typeof t === "string") return { id: idx, name: t };
+      return t;
     });
   } else if (tags?.data) {
-    // Kasus Strapi Original
     tagsList = tags.data;
   }
 
-  // Fallback default tags jika kosong
   if (tagsList.length === 0) {
     tagsList = [
       { id: 1, attributes: { name: "Umum" } },
@@ -132,7 +118,6 @@ export default function AgendaCard({ data, locale }: AgendaCardProps) {
     return "bg-gray-200 text-gray-700";
   };
 
-  // Helper untuk ambil nama tag dengan aman
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const getTagName = (tag: any) => {
     return tag.attributes?.name || tag.name || "Tag";
@@ -152,7 +137,6 @@ export default function AgendaCard({ data, locale }: AgendaCardProps) {
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-500"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            // Tambahkan onError agar jika URL masih salah, dia lari ke placeholder
             onError={(e) => {
               const target = e.target as HTMLImageElement;
               target.srcset = PLACEHOLDER_IMAGE;
@@ -178,7 +162,7 @@ export default function AgendaCard({ data, locale }: AgendaCardProps) {
               <span
                 key={index}
                 className={`text-[10px] font-semibold px-3 py-1.5 rounded-lg whitespace-nowrap shadow-sm ${getTagStyle(
-                  index,
+                  index
                 )}`}
               >
                 {getTagName(tag)}

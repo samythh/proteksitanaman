@@ -3,14 +3,13 @@ import createNextIntlPlugin from "next-intl/plugin";
 
 /** @type {import('next').NextConfig} */
 
-// 1. Setup Plugin Bahasa
+// 1. Setup Plugin Bahasa (JANGAN DIHAPUS)
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 // 2. Setup Konfigurasi Utama (Gambar)
 const nextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
-    // Matikan optimasi static sementara jika perlu, tapi remotePatterns lebih penting
     remotePatterns: [
       {
         protocol: "https",
@@ -28,10 +27,17 @@ const nextConfig = {
         port: "1337",
         pathname: "/uploads/**",
       },
-      // --- INI YANG PALING PENTING UNTUK ERROR ANDA ---
+      // ✅ TAMBAHAN BARU: IP Address Server Strapi Anda
+      {
+        protocol: "http",
+        hostname: "202.10.34.176",
+        port: "1337",
+        pathname: "/uploads/**",
+      },
+      // Domain Backend (Simpan saja untuk jaga-jaga)
       {
         protocol: "https",
-        hostname: "api.backendn8n.cloud", // <-- Masukkan domain Anda di sini
+        hostname: "api.backendn8n.cloud",
         port: "",
         pathname: "/uploads/**",
       },
@@ -40,5 +46,5 @@ const nextConfig = {
   },
 };
 
-// 3. Export Gabungan
+// 3. Export Gabungan (PENTING: Harus dibungkus withNextIntl)
 export default withNextIntl(nextConfig);

@@ -31,7 +31,7 @@ import ProfileGridSection from "@/components/sections/ProfileGridSection";
 import CurriculumSection from "@/components/sections/CurriculumSection";
 import GallerySection from "@/components/sections/GallerySection";
 import DocumentSection from "@/components/sections/DocumentSection";
-import PublicationSection from "@/components/sections/PublicationSection"; // ✅ NEW: Import Publikasi
+import PublicationSection from "@/components/sections/PublicationSection";
 
 // --- TYPE DEFINITIONS ---
 import { Agenda } from "@/types/agenda";
@@ -113,7 +113,7 @@ export default function SectionRenderer({
          case "sections.document-section":
             return <DocumentSection key={index} data={section} />;
 
-         // 10. PUBLICATION SECTION (Publikasi Ilmiah) ✅ NEW
+         // 10. PUBLICATION SECTION (Publikasi Ilmiah)
          case "sections.publication-section":
             return <PublicationSection key={index} data={section} />;
 
@@ -175,6 +175,7 @@ export default function SectionRenderer({
             }));
             return <WelcomeSection key={index} data={welcomeProfiles} />;
 
+         // ✅ PERBAIKAN STATS SECTION: Menambahkan props 'title'
          case "sections.stats":
             const statsData: StatItemData[] = section.items.map((item: any) => ({
                id: item.id,
@@ -182,7 +183,13 @@ export default function SectionRenderer({
                value: item.value,
                iconUrl: getStrapiMedia(item.icon?.url) || "",
             }));
-            return <StatsSection key={index} data={statsData} />;
+            return (
+               <StatsSection
+                  key={index}
+                  title={section.title} // <-- Props Title ditambahkan
+                  data={statsData}
+               />
+            );
 
          case "sections.accreditation":
             const certData: CertificateItemData[] = section.certificates.map((item: any) => ({
@@ -192,6 +199,8 @@ export default function SectionRenderer({
             }));
             return <AccreditationSection key={index} title={section.title} data={certData} />;
 
+         // Menghandle kedua kemungkinan nama komponen berita
+         case "sections.news-dashboard":
          case "sections.news-section":
             return (
                <NewsDashboard

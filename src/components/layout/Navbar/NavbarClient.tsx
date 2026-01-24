@@ -5,9 +5,10 @@ import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { Search, Menu, X, ChevronDown } from "lucide-react";
+// [PERBAIKAN]: Menghapus 'Search' dari import karena tidak dipakai
+import { Menu, X, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-import SearchBar from "@/components/ui/SearchBar"; // <--- Tambahkan ini
+import SearchBar from "@/components/ui/SearchBar";
 
 // --- Interfaces ---
 interface SubMenuItem {
@@ -72,7 +73,6 @@ export default function NavbarClient({
     }
 
     // 2. Bersihkan URL (Hapus localhost jika tidak sengaja tertulis)
-    // Regex ini menghapus "http://localhost:3000" atau domain apapun di depan
     let cleanUrl = url.replace(/^(?:https?:\/\/)?[^\/]+/, "");
 
     // Pastikan diawali dengan slash. "informasi" -> "/informasi"
@@ -81,18 +81,15 @@ export default function NavbarClient({
     }
 
     // 3. LOGIKA SEGMENT (YANG PALING AKURAT)
-    // Kita pecah URL: "/informasi/berita" -> ["", "informasi", "berita"]
     const segments = cleanUrl.split("/");
     const firstSegment = segments[1]; // Ambil kata pertama setelah slash awal
 
     // Cek apakah kata pertama adalah 'id' atau 'en'
     if (firstSegment === "id" || firstSegment === "en") {
-      // Jika sudah ada (misal input: /id/berita), kembalikan apa adanya
       return cleanUrl;
     }
 
     // 4. Jika belum ada, PAKSA tambahkan di depan
-    // Hasil: /id + /informasi/berita
     return `/${currentLang}${cleanUrl}`;
   };
 
@@ -157,7 +154,7 @@ export default function NavbarClient({
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-transform duration-500",
         "bg-[#005320] border-b border-white/10 shadow-md text-white py-4",
-        isVisible ? "translate-y-0" : "-translate-y-full",
+        isVisible ? "translate-y-0" : "-translate-y-full"
       )}
     >
       <div className="container mx-auto flex items-center justify-between px-4">
@@ -252,7 +249,7 @@ export default function NavbarClient({
                 "px-3 py-1 text-xs font-bold rounded-full transition-all",
                 currentLang === "id"
                   ? "bg-yellow-400 text-[#005320]"
-                  : "text-white hover:text-yellow-200",
+                  : "text-white hover:text-yellow-200"
               )}
             >
               ID
@@ -263,7 +260,7 @@ export default function NavbarClient({
                 "px-3 py-1 text-xs font-bold rounded-full transition-all",
                 currentLang === "en"
                   ? "bg-yellow-400 text-[#005320]"
-                  : "text-white hover:text-yellow-200",
+                  : "text-white hover:text-yellow-200"
               )}
             >
               EN
@@ -271,7 +268,6 @@ export default function NavbarClient({
           </div>
 
           {/* --- SEARCH BAR (DESKTOP) --- */}
-          {/* Tampil di layar besar (lg), sembunyi di mobile */}
           <div className="hidden lg:block">
             <SearchBar />
           </div>
@@ -294,7 +290,7 @@ export default function NavbarClient({
               "fixed inset-0 z-[60] bg-black/60 lg:hidden transition-opacity duration-300 ease-in-out",
               isClosing
                 ? "opacity-0 pointer-events-none"
-                : "opacity-100 pointer-events-auto",
+                : "opacity-100 pointer-events-auto"
             )}
             onClick={() => setMobileMenuOpen(false)}
             aria-hidden="true"
@@ -304,7 +300,7 @@ export default function NavbarClient({
             className={cn(
               "fixed top-0 right-0 h-screen w-[85%] max-w-[320px] bg-[#005320] shadow-2xl z-[70] flex flex-col lg:hidden ",
               "transition-transform duration-350 ease-in-out",
-              isClosing ? "translate-x-full" : "translate-x-0",
+              isClosing ? "translate-x-full" : "translate-x-0"
             )}
             role="dialog"
             aria-modal="true"
@@ -387,7 +383,7 @@ export default function NavbarClient({
                     "py-2.5 rounded-lg text-sm font-bold border transition-colors",
                     currentLang === "id"
                       ? "bg-yellow-400 border-yellow-400 text-[#005320]"
-                      : "border-white/20 text-white hover:border-yellow-400",
+                      : "border-white/20 text-white hover:border-yellow-400"
                   )}
                 >
                   INDONESIA
@@ -401,7 +397,7 @@ export default function NavbarClient({
                     "py-2.5 rounded-lg text-sm font-bold border transition-colors",
                     currentLang === "en"
                       ? "bg-yellow-400 border-yellow-400 text-[#005320]"
-                      : "border-white/20 text-white hover:border-yellow-400",
+                      : "border-white/20 text-white hover:border-yellow-400"
                   )}
                 >
                   ENGLISH

@@ -19,12 +19,10 @@ export default function PartnershipSection({ title, data }: PartnershipSectionPr
    if (!data || data.length === 0) return null;
 
    // Duplikasi data diperbanyak (10x lipat)
+   // NOTE: Jika data Anda nanti sudah >20 item asli, kurangi angka 10 ini jadi 2 atau 3 agar tidak terlalu berat memuat gambarnya.
    const MARQUEE_SET = Array(10).fill(data).flat();
 
    return (
-      // PERBAIKAN DISINI:
-      // pb-20 diubah menjadi pb-40 (Mobile) dan md:pb-64 (Laptop)
-      // Ini akan membuat background hijau memanjang jauh ke bawah
       <section className="bg-[#749F74] pt-16 pb-40 md:pb-64 overflow-hidden relative group/section">
 
          {/* 1. HEADER */}
@@ -43,13 +41,13 @@ export default function PartnershipSection({ title, data }: PartnershipSectionPr
                className="w-full"
                style={{ maskImage: 'linear-gradient(to right, transparent, black 5%, black 95%, transparent)' }}
             >
-               <div className="flex w-full hover:pause-animation">
+               {/* Tambahkan class 'pause-animation' agar CSS hover bekerja */}
+               <div className="flex w-full pause-animation">
 
                   {/* Loop 2x div untuk efek infinite scroll */}
                   {[1, 2].map((groupIndex) => (
                      <div
                         key={groupIndex}
-                        // gap-3 dan pr-3 untuk jarak antar item
                         className="flex gap-3 py-4 animate-marquee min-w-full flex-shrink-0 items-center justify-start pr-3"
                         aria-hidden={groupIndex === 2 ? "true" : undefined}
                      >
@@ -97,8 +95,10 @@ export default function PartnershipSection({ title, data }: PartnershipSectionPr
           to { transform: translateX(-100%); }
         }
         .animate-marquee {
-          animation: marquee 120s linear infinite; 
+          /* UBAH DISINI: Ganti 120s menjadi 300s (5 menit) agar lebih lambat */
+          animation: marquee 300s linear infinite; 
         }
+        /* Logic Pause saat di-Hover */
         .pause-animation:hover .animate-marquee {
           animation-play-state: paused;
         }

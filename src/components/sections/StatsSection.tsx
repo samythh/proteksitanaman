@@ -12,52 +12,45 @@ export interface StatItemData {
 }
 
 interface StatsSectionProps {
+   title?: string;
    data: StatItemData[];
 }
 
 // --- SUB-COMPONENT: COUNTER ITEM ---
-// Komponen kecil untuk menangani logika animasi per angka
 const CounterItem = ({ value }: { value: string }) => {
    const [count, setCount] = useState(0);
    const elementRef = useRef<HTMLSpanElement>(null);
 
-   // Pisahkan angka dan teks non-angka (misal: "150+" -> angka: 150, suffix: "+")
-   // Regex ini mengambil angka pertama yang ditemukan
    const numericValue = parseInt(value.replace(/\D/g, "")) || 0;
-   // Suffix adalah sisa string setelah angka dihapus (opsional, untuk kasus format kompleks)
    const suffix = value.replace(/[0-9]/g, "");
 
    useEffect(() => {
       const observer = new IntersectionObserver(
          (entries) => {
             if (entries[0].isIntersecting) {
-               // --- MULAI ANIMASI ---
                let start = 0;
                const end = numericValue;
-               const duration = 2000; // Durasi animasi dalam milidetik (2 detik)
-               const incrementTime = 20; // Update setiap 20ms
-
-               // Hitung berapa langkah yang dibutuhkan
+               const duration = 2000;
+               const incrementTime = 20;
                const totalSteps = duration / incrementTime;
                const incrementValue = end / totalSteps;
 
                const timer = setInterval(() => {
                   start += incrementValue;
                   if (start >= end) {
-                     setCount(end); // Pastikan angka akhir akurat
+                     setCount(end);
                      clearInterval(timer);
                   } else {
                      setCount(Math.ceil(start));
                   }
                }, incrementTime);
 
-               // Hentikan observasi setelah animasi dimulai agar tidak berulang
                if (elementRef.current) {
                   observer.unobserve(elementRef.current);
                }
             }
          },
-         { threshold: 0.5 } // Animasi mulai saat 50% elemen terlihat
+         { threshold: 0.5 }
       );
 
       if (elementRef.current) {
@@ -72,45 +65,45 @@ const CounterItem = ({ value }: { value: string }) => {
       };
    }, [numericValue]);
 
-   // Jika value aslinya tidak mengandung angka (misal teks doang), tampilkan langsung
    if (numericValue === 0 && value !== "0") {
       return <span>{value}</span>;
    }
 
    return (
       <span ref={elementRef} className="tabular-nums">
-         {/* Tampilkan angka yang sedang berjalan + suffix aslinya */}
          {count}
          {suffix}
       </span>
    );
 };
 
-export default function StatsSection({ data }: StatsSectionProps) {
+// ✅ MAIN COMPONENT
+export default function StatsSection({ data, title }: StatsSectionProps) {
    if (!data || data.length === 0) return null;
 
    return (
-      <section className="relative z-20 px-6 md:px-12 lg:px-32 container mx-auto">
-         {/* Container Utama:
-          - rounded-3xl: Sudut membulat modern
-          - -mt-28: Margin negatif untuk efek melayang menumpuk section sebelumnya
-      */}
-         <div className="bg-gray-50 rounded-3xl shadow-xl p-8 md:p-12 -mt-28 border border-gray-100">
+      <section className="relative z-20 px-4 md:px-8 lg:px-24 container mx-auto">
+         {/* PERUBAHAN UTAMA DISINI (PADDING):
+            - Sebelumnya: p-6 md:p-8
+            - Sekarang: py-10 px-6 md:py-14 md:px-8 
+            (py lebih besar dari px untuk membuat kesan lebih panjang vertikal)
+         */}
+         <div className="bg-gray-50 rounded-3xl shadow-xl py-10 px-6 md:py-14 md:px-8 -mt-28 border border-gray-100">
 
-            <div className="text-center mb-10">
+            <div className="text-center mb-8">
                <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
-                  Fakta & Data
+                  {title || "Fakta & Data"}
                </h2>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 text-center divide-y md:divide-y-0 md:divide-x divide-gray-200/50">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-6 text-center divide-y md:divide-y-0 md:divide-x divide-gray-200/50">
                {data.map((stat) => (
                   <div
                      key={stat.id}
-                     className="flex flex-col items-center gap-2 pt-4 md:pt-0"
+                     className="flex flex-col items-center gap-2 pt-6 md:pt-0"
                   >
-                     {/* Icon */}
-                     <div className="relative w-12 h-12 mb-2">
+                     {/* Icon Container */}
+                     <div className="relative w-10 h-10 md:w-11 md:h-11 mb-1">
                         {stat.iconUrl ? (
                            <Image
                               src={stat.iconUrl}
@@ -119,20 +112,19 @@ export default function StatsSection({ data }: StatsSectionProps) {
                               className="object-contain"
                            />
                         ) : (
-                           <div className="w-full h-full bg-gray-200 rounded-full flex items-center justify-center text-xs text-gray-400">
+                           <div className="w-full h-full bg-gray-200 rounded-full flex items-center justify-center text-[10px] text-gray-400">
                               No Icon
                            </div>
                         )}
                      </div>
 
-                     {/* Angka Bold dengan Animasi */}
-                     <span className="text-3xl md:text-4xl font-extrabold text-gray-900">
-                        {/* Panggil Component CounterItem di sini */}
+                     {/* Angka Besar */}
+                     <span className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-gray-900 leading-tight">
                         <CounterItem value={stat.value} />
                      </span>
 
-                     {/* Label Kecil */}
-                     <span className="text-sm md:text-base text-gray-500 font-medium">
+                     {/* Label */}
+                     <span className="text-xs text-gray-500 font-medium leading-tight px-1">
                         {stat.label}
                      </span>
                   </div>
@@ -141,4 +133,4 @@ export default function StatsSection({ data }: StatsSectionProps) {
          </div>
       </section>
    );
-}
+}  

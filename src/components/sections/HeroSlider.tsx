@@ -8,7 +8,6 @@ import { ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
 
 // --- DEFINISI TIPE DATA ---
 
-// Meng-cover struktur Flat (v5) dan Nested (v4)
 interface SlideImage {
    url?: string;
    alternativeText?: string;
@@ -64,7 +63,6 @@ export default function HeroSlider({ data }: HeroSliderProps) {
 
    return (
       <section className="relative w-full h-[500px] md:h-[600px] lg:h-[700px] bg-gray-900 overflow-hidden group -mt-20 lg:-mt-24">
-         {/* Menggunakan tipe eksplisit untuk index (idx: number) */}
          {slides.map((slide: SlideItem, index: number) => {
 
             // Logic URL Gambar
@@ -99,7 +97,10 @@ export default function HeroSlider({ data }: HeroSliderProps) {
                      </div>
                   )}
 
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-90" />
+                  {/* ✅ PERUBAHAN DISINI: Gradien lebih tebal/gelap */}
+                  {/* Lama: from-black/80 via-transparent to-transparent */}
+                  {/* Baru: from-black (pekat bawah) via-black/60 (gelap tengah) to-black/10 (redup atas) */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-black/10 opacity-90" />
 
                   <div className="absolute inset-0 flex flex-col justify-center items-start text-left px-8 md:px-20 lg:px-32 z-20 w-full pt-[85px]">
                      <h2 className={`text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-4 drop-shadow-xl transition-all duration-700 delay-100 transform max-w-4xl leading-tight ${isActive ? 'translate-x-0 opacity-100' : '-translate-x-10 opacity-0'}`}>
@@ -146,12 +147,10 @@ export default function HeroSlider({ data }: HeroSliderProps) {
                </button>
 
                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex space-x-3 z-30">
-                  {/* PERBAIKAN: Menambahkan tipe idx: number dan aria-label */}
                   {slides.map((_, idx: number) => (
                      <button
                         key={idx}
                         onClick={() => setCurrent(idx)}
-                        // PENTING: aria-label wajib ada untuk aksesibilitas (Axe Linter)
                         aria-label={`Go to slide ${idx + 1}`}
                         className={`h-2 rounded-full transition-all duration-300 shadow-sm ${idx === current ? 'w-8 bg-yellow-400' : 'w-2 bg-white/50 hover:bg-white'}`}
                      />
