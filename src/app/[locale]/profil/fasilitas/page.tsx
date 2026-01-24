@@ -1,20 +1,9 @@
 // File: src/app/[locale]/profil/fasilitas/page.tsx
 
 import { fetchAPI } from "@/lib/strapi/fetcher";
-import PageHeader from "@/components/ui/PageHeader";
 import FacilitiesListSection from "@/components/sections/FacilitiesListSection";
 
-// --- TYPE DEFINITIONS (Mengikuti Gaya Staff Page) ---
-
-interface StrapiImage {
-   url?: string;
-   data?: {
-      attributes?: {
-         url?: string;
-      };
-   } | null;
-}
-
+// --- TYPE DEFINITIONS ---
 interface StrapiResponse<T> {
    data: T;
    meta?: {
@@ -27,14 +16,14 @@ interface StrapiResponse<T> {
    };
 }
 
-interface GlobalData {
-   attributes?: {
-      Default_Hero_Image?: StrapiImage;
-   };
-   Default_Hero_Image?: StrapiImage;
+// ✅ Interface Baru untuk Config Halaman
+interface FacilitiesPageConfig {
+   section_label?: string;
+   title_main?: string;
+   title_highlight?: string;
+   description?: string;
 }
 
-// 1. Generate Metadata
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
    const { locale } = await params;
    return {
@@ -42,7 +31,6 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
    };
 }
 
-// 2. Halaman Utama Fasilitas
 export default async function FasilitasPage({
    params,
 }: {
@@ -50,67 +38,50 @@ export default async function FasilitasPage({
 }) {
    const { locale } = await params;
 
-   // --- 1. INISIALISASI VARIABEL ---
    // eslint-disable-next-line @typescript-eslint/no-explicit-any
    let facilitiesList: any[] = [];
-   let finalHeroUrl: string | undefined = undefined;
+   let pageConfig: FacilitiesPageConfig | null = null;
 
-   // --- 2. FETCH DATA ---
    try {
-      const [facilitiesRes, globalRes] = await Promise.all([
-         // A. Ambil Data Fasilitas
+      // ✅ Fetching Parallel: List Fasilitas & Config Halaman
+      const [facilitiesRes, configRes] = await Promise.all([
+         // 1. Fetch List Fasilitas
          fetchAPI("/facilities", {
             locale: locale,
             sort: ["name:asc"],
             populate: {
-               images: {
-                  fields: ["url", "alternativeText", "width", "height"],
-               },
+               images: { fields: ["url", "alternativeText", "width", "height"] },
             },
             pagination: { limit: 100 },
          }),
 
-         // B. Config Global (Untuk Hero Image)
-         fetchAPI("/global", {
-            populate: "Default_Hero_Image",
+         // 2. Fetch Config Halaman (Judul, Deskripsi, dll)
+         fetchAPI("/facilities-page", {
             locale: locale,
+            // Tidak butuh populate karena cuma text field biasa
          }),
       ]);
 
-      // Type Casting & Assignment
+      // Type Casting
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const facilitiesData = facilitiesRes as StrapiResponse<any[]>;
-      const globalConfig = globalRes as StrapiResponse<GlobalData>;
+      const configData = configRes as StrapiResponse<{ attributes: FacilitiesPageConfig }>;
 
       facilitiesList = facilitiesData?.data || [];
-
-      // Ekstraksi Gambar Hero (Gaya Staff Page)
-      const globalAttr = globalConfig?.data?.attributes || globalConfig?.data;
-      const heroData = globalAttr?.Default_Hero_Image;
-      finalHeroUrl = heroData?.url || heroData?.data?.attributes?.url;
+      // Handle struktur Strapi (attributes atau flat)
+      pageConfig = configData?.data?.attributes || configData?.data || null;
 
    } catch (error) {
       console.error("[FasilitasPage Error] Gagal mengambil data:", error);
    }
 
-   const pageTitle = locale === "en" ? "Facilities" : "Fasilitas";
-
    return (
-      <div className="bg-white min-h-screen pb-20 -mt-20 md:-mt-24">
-
-         {/* HEADER: Menggunakan Format String seperti Staff Page */}
-         <PageHeader
-            title={pageTitle}
-            breadcrumb={`Profil / ${pageTitle}`}
-            backgroundImageUrl={finalHeroUrl}
-            sectionTitle="Profil"
-            sectionSubtitle={pageTitle}
-         />
-
-         {/* Main Content */}
-         <div className="container mx-auto px-4 relative z-10">
+      <div className="bg-white min-h-screen pt-16 md:pt-20 pb-20">
+         <div className="container mx-auto px-0 relative z-10">
+            {/* ✅ Kirim data pageConfig ke Client Component */}
             <FacilitiesListSection
                data={{ facilities: facilitiesList }}
+               config={pageConfig}
                locale={locale}
             />
          </div>

@@ -97,10 +97,10 @@ export default function HeroSlider({ data }: HeroSliderProps) {
                      </div>
                   )}
 
-                  {/* ✅ PERUBAHAN DISINI: Gradien lebih tebal/gelap */}
-                  {/* Lama: from-black/80 via-transparent to-transparent */}
-                  {/* Baru: from-black (pekat bawah) via-black/60 (gelap tengah) to-black/10 (redup atas) */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-black/10 opacity-90" />
+                  {/* ✅ PERUBAHAN DISINI: Gradien dibuat lebih terang/transparan */}
+                  {/* Lama: from-black via-black/60 to-black/10 opacity-90 */}
+                  {/* Baru: from-black/90 (gelap di bawah) via-black/30 (transparan di tengah) to-transparent (bening di atas) */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent opacity-80" />
 
                   <div className="absolute inset-0 flex flex-col justify-center items-start text-left px-8 md:px-20 lg:px-32 z-20 w-full pt-[85px]">
                      <h2 className={`text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-4 drop-shadow-xl transition-all duration-700 delay-100 transform max-w-4xl leading-tight ${isActive ? 'translate-x-0 opacity-100' : '-translate-x-10 opacity-0'}`}>
