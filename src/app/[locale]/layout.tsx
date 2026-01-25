@@ -5,16 +5,17 @@ import { getMessages } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import "@/app/globals.css";
-// PERBAIKAN 1: Hapus import 'Locale' yang tidak terpakai
-// import { type Locale } from "@/i18n/settings";
 import { ReactNode } from "react";
+
+// --- KOMPONEN UI & LAYOUT ---
 import AccessibilityWidget from "@/components/AccessibilityWidget";
 import ScrollToTop from "@/components/ui/ScrollToTop";
-
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/ui/footer";
-
 import SmoothScrolling from "@/components/ui/SmoothScrolling";
+
+// ✅ 1. Import ProgressBarProvider
+import ProgressBarProvider from "@/components/providers/ProgressBarProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -31,9 +32,7 @@ type Props = {
 export default async function LocaleLayout({ children, params }: Props) {
   const { locale } = await params;
 
-  // PERBAIKAN 2: Ganti logika validasi
-  // Daripada memaksa 'locale as any', kita casting array-nya agar mau menerima string.
-  // Ini lebih aman dan lolos ESLint.
+  // Validasi locale aman
   if (!(routing.locales as readonly string[]).includes(locale)) {
     notFound();
   }
@@ -44,6 +43,10 @@ export default async function LocaleLayout({ children, params }: Props) {
     <html lang={locale}>
       <body className={inter.className}>
         <NextIntlClientProvider messages={messages}>
+
+          {/* ✅ 2. Tambahkan Provider di sini (Paling Atas) */}
+          <ProgressBarProvider />
+
           <Navbar locale={locale} />
 
           <main className="min-h-screen flex flex-col pt-[85px]">

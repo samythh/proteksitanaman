@@ -5,7 +5,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Calendar, ChevronRight, Filter, Loader2 } from "lucide-react";
-import { FaArrowLeft } from "react-icons/fa"; // Tambahkan icon ini
+import { FaArrowLeft } from "react-icons/fa";
 import { getStrapiMedia } from "@/lib/strapi/utils";
 import qs from "qs";
 
@@ -71,7 +71,7 @@ interface NewsDashboardProps {
 
 const TEXTS = {
    id: {
-      readMoreLink: "Lihat Semua", // Update Teks
+      readMoreLink: "Lihat Semua",
       title: "Berita Terkini",
       newest: "Terbaru",
       oldest: "Terlama",
@@ -80,7 +80,7 @@ const TEXTS = {
       noData: "Tidak ada berita ditemukan."
    },
    en: {
-      readMoreLink: "View All", // Update Teks
+      readMoreLink: "View All",
       title: "Latest News",
       newest: "Newest",
       oldest: "Oldest",
@@ -128,16 +128,17 @@ export default function NewsDashboard({ initialData, locale, isHomePage = false 
       return DEFAULT_COLOR;
    };
 
-   // --- FETCH DATA ---
+   // --- FETCH DATA (DIPERBAIKI: Handle 404 & Empty Data) ---
    const fetchNews = async (pageNum: number, sort: "desc" | "asc", append: boolean) => {
       setLoading(true);
       try {
+         const pageSize = 5;
          const query = qs.stringify({
             locale: locale,
             sort: sort === 'desc' ? ['publishedDate:desc', 'publishedAt:desc'] : ['publishedDate:asc', 'publishedAt:asc'],
             pagination: {
                page: pageNum,
-               pageSize: 5,
+               pageSize: pageSize,
             },
             populate: {
                cover: { fields: ["url"] },
@@ -147,9 +148,22 @@ export default function NewsDashboard({ initialData, locale, isHomePage = false 
          }, { encodeValuesOnly: true });
 
          const res = await fetch(`${process.env.NEXT_PUBLIC_STRAPI_API_URL || "http://localhost:1337/api"}/articles?${query}`);
+
+         // 🔥 PERBAIKAN UTAMA: Handle 404 secara halus
+         if (!res.ok) {
+            if (res.status === 404) {
+               // Halaman habis, bukan error fatal
+               setHasMore(false);
+               setLoading(false);
+               return;
+            }
+            throw new Error(`Gagal mengambil data: ${res.status}`);
+         }
+
          const json = await res.json();
 
-         const rawData: StrapiRawItem[] = json.data;
+         // Safety Check: Pastikan data array
+         const rawData: StrapiRawItem[] = (json && Array.isArray(json.data)) ? json.data : [];
 
          const newArticles: NewsItem[] = rawData.map((item) => ({
             id: item.id,
@@ -168,10 +182,15 @@ export default function NewsDashboard({ initialData, locale, isHomePage = false 
             setHasMore(false);
          } else {
             setArticles(prev => append ? [...prev, ...newArticles] : newArticles);
+            // Cek jika data yang diterima kurang dari pageSize
+            if (newArticles.length < pageSize) {
+               setHasMore(false);
+            }
          }
 
       } catch (error) {
          console.error("Error loading news:", error);
+         setHasMore(false);
       } finally {
          setLoading(false);
       }
