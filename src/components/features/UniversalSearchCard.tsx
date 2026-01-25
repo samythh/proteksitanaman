@@ -4,15 +4,18 @@
 import Image from "next/image";
 import Link from "next/link";
 import { format } from "date-fns";
-import { id as idLocale, enUS } from "date-fns/locale"; // Import enUS juga untuk jaga-jaga
-import { FaCalendarAlt } from "react-icons/fa";
+import { id as idLocale, enUS } from "date-fns/locale";
+import {
+  FaCalendarAlt,
+  FaUserTie,
+  FaBuilding,
+  FaNewspaper,
+} from "react-icons/fa";
 
-// Placeholder aman
 const PLACEHOLDER_IMAGE = "https://placehold.co/600x400/png?text=No+Image";
 const STRAPI_BASE_URL =
   process.env.NEXT_PUBLIC_STRAPI_API_URL || "https://api.backendn8n.cloud";
 
-// 1. Tambahkan 'locale' ke dalam interface Props
 interface UniversalSearchCardProps {
   item: any;
   locale: string;
@@ -22,9 +25,8 @@ export default function UniversalSearchCard({
   item,
   locale,
 }: UniversalSearchCardProps) {
-  // A. Logika Gambar (Anti Mixed Content)
+  // Logic Gambar
   let imageUrl = item.image || PLACEHOLDER_IMAGE;
-
   if (typeof imageUrl === "string") {
     if (imageUrl.startsWith("/")) {
       imageUrl = `${STRAPI_BASE_URL}${imageUrl}`;
@@ -33,90 +35,100 @@ export default function UniversalSearchCard({
     }
   }
 
-  // B. Format Tanggal
+  // Format Tanggal
   let dateLabel = "";
-  if (item.publishedAt) {
+  if (item.formattedDate) {
     try {
-      dateLabel = format(new Date(item.publishedAt), "d MMMM yyyy", {
+      dateLabel = format(new Date(item.formattedDate), "d MMMM yyyy", {
         locale: locale === "en" ? enUS : idLocale,
       });
     } catch (e) {
-      /* ignore error */
+      /* ignore */
     }
   }
 
-  // C. Data Highlight
+  // Highlight Data
   const titleHtml = item._formatted?.title || item.title;
   const contentHtml =
-    item._formatted?.content ||
-    item.content ||
-    item.description ||
-    "Tidak ada deskripsi.";
+    item._formatted?.content || item.content || "Tidak ada deskripsi.";
 
-  // D. Badge Color
-  const getBadgeColor = (type: string) => {
-    // Pastikan type ada sebelum toLowerCase
-    const safeType = (type || "").toLowerCase();
-    if (safeType.includes("berita")) return "bg-blue-600";
-    if (safeType.includes("agenda")) return "bg-orange-500";
-    if (safeType.includes("dosen")) return "bg-purple-600";
-    if (safeType.includes("fasilitas")) return "bg-emerald-600";
-    return "bg-gray-600";
+  // Badge & Icon Logic
+  const getTypeInfo = (type: string) => {
+    const t = (type || "").toLowerCase();
+    if (t === "article")
+      return {
+        label: "Berita",
+        color: "bg-blue-100 text-blue-800",
+        icon: <FaNewspaper />,
+      };
+    if (t === "agenda")
+      return {
+        label: "Agenda",
+        color: "bg-orange-100 text-orange-800",
+        icon: <FaCalendarAlt />,
+      };
+    if (t === "staff")
+      return {
+        label: "Dosen & Staff",
+        color: "bg-purple-100 text-purple-800",
+        icon: <FaUserTie />,
+      };
+    if (t === "fasilitas")
+      return {
+        label: "Fasilitas",
+        color: "bg-emerald-100 text-emerald-800",
+        icon: <FaBuilding />,
+      };
+    return { label: "Halaman", color: "bg-gray-100 text-gray-800", icon: null };
   };
 
-  // E. LOGIKA FIX LINK (PENTING!)
-  // Gabungkan locale dengan link dari Meilisearch
-  // Hasilnya: /id + /profil/staf/slug -> /id/profil/staf/slug
+  const typeInfo = getTypeInfo(item.type);
   const finalLink = item.link ? `/${locale}${item.link}` : "#";
 
   return (
-    <Link href={finalLink} className="block group h-full">
-      <div className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 overflow-hidden h-full flex flex-col hover:-translate-y-1">
-        {/* Gambar */}
-        <div className="relative h-48 w-full bg-gray-200">
-          <Image
-            src={imageUrl}
-            alt={item.title || "Search Result"}
-            fill
-            className="object-cover group-hover:scale-105 transition-transform duration-500"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.srcset = PLACEHOLDER_IMAGE;
-            }}
-          />
-          {item.type && (
-            <div
-              className={`absolute top-3 right-3 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-sm uppercase tracking-wide z-10 ${getBadgeColor(item.type)}`}
+    <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4 hover:shadow-md transition-shadow duration-300">
+      <div className="flex gap-4 flex-col sm:flex-row">
+        {/* Gambar (Thumbnail Kecil di Kiri - Opsional) */}
+        {item.image && (
+          <div className="relative w-full sm:w-32 h-32 flex-shrink-0 rounded-md overflow-hidden bg-gray-100">
+            <Image
+              src={imageUrl}
+              alt={item.title || "Thumbnail"}
+              fill
+              className="object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).srcset = PLACEHOLDER_IMAGE;
+              }}
+            />
+          </div>
+        )}
+
+        <div className="flex-1">
+          {/* Header Card: Tipe & Tanggal */}
+          <div className="flex items-center gap-3 mb-2 text-xs">
+            <span
+              className={`px-2 py-1 rounded font-medium flex items-center gap-1 ${typeInfo.color}`}
             >
-              {item.type}
-            </div>
-          )}
-        </div>
+              {typeInfo.icon} {typeInfo.label}
+            </span>
+            {dateLabel && <span className="text-gray-500">{dateLabel}</span>}
+          </div>
 
-        <div className="p-5 flex flex-col flex-grow">
-          {dateLabel && (
-            <div className="flex items-center gap-2 text-xs text-gray-400 mb-2">
-              <FaCalendarAlt />
-              <span>{dateLabel}</span>
-            </div>
-          )}
+          {/* Judul Link */}
+          <Link href={finalLink} className="group">
+            <h3
+              className="text-lg font-bold text-gray-900 mb-2 group-hover:text-green-700 group-hover:underline decoration-2 underline-offset-2"
+              dangerouslySetInnerHTML={{ __html: titleHtml }}
+            />
+          </Link>
 
-          <h3
-            className="text-lg font-bold text-gray-800 mb-2 line-clamp-2 group-hover:text-blue-700 transition-colors"
-            dangerouslySetInnerHTML={{ __html: titleHtml }}
-          />
-
+          {/* Snippet / Deskripsi */}
           <div
             className="text-sm text-gray-600 line-clamp-3 leading-relaxed"
             dangerouslySetInnerHTML={{ __html: contentHtml }}
           />
-
-          <div className="mt-auto pt-4 text-xs font-semibold text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-            Lihat Detail &rarr;
-          </div>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
