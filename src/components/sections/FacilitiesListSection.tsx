@@ -1,7 +1,7 @@
 // File: src/components/features/FacilitiesListSection.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, X, ChevronDown, Image as ImageIcon, PlayCircle } from "lucide-react";
@@ -23,6 +23,49 @@ const DICTIONARY = {
       endOfList: "End of List",
       noMedia: "No image available"
    }
+};
+
+// --- ANIMATION WRAPPER COMPONENT (DIPERBAIKI) ---
+const ScrollReveal = ({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) => {
+   const [isVisible, setIsVisible] = useState(false);
+   const ref = useRef<HTMLDivElement>(null);
+
+   useEffect(() => {
+      // ✅ FIX: Simpan ref.current ke variabel lokal 'element'
+      const element = ref.current;
+
+      const observer = new IntersectionObserver(
+         (entries) => {
+            if (entries[0].isIntersecting) {
+               setIsVisible(true);
+               // Gunakan variabel lokal 'element'
+               if (element) observer.unobserve(element);
+            }
+         },
+         { threshold: 0.15 }
+      );
+
+      // Gunakan variabel lokal 'element' saat observe
+      if (element) {
+         observer.observe(element);
+      }
+
+      return () => {
+         // ✅ Gunakan variabel lokal 'element' saat cleanup
+         if (element) observer.disconnect();
+      };
+   }, []);
+
+   return (
+      <div
+         ref={ref}
+         className={`transition-all duration-1000 ease-out transform ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-24"
+            }`}
+         style={{ transitionDelay: `${delay}ms` }}
+      >
+         {children}
+      </div>
+   );
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -58,17 +101,15 @@ const FacilityItemCard = ({ item, index, onImageClick, locale }: ItemProps) => {
    const t = DICTIONARY[locale === 'en' ? 'en' : 'id'];
    const isEven = index % 2 === 0;
 
-   // --- LOGIKA GAMBAR (UPDATED) ---
-   // 1. Coba ambil gambar dari upload Strapi (Prioritas Utama)
+   // 1. Coba ambil gambar dari upload Strapi
    let coverImage = gallery.length > 0 ? getStrapiMedia(gallery[0].attributes?.url || gallery[0].url) : null;
 
-   // 2. Jika tidak ada gambar upload, tapi ada YouTube ID -> Ambil Thumbnail YouTube High Res
+   // 2. Jika tidak ada gambar upload, tapi ada YouTube ID -> Ambil Thumbnail YouTube
    const isYoutubeThumbnail = !coverImage && youtube_id;
    if (isYoutubeThumbnail) {
       coverImage = `https://img.youtube.com/vi/${youtube_id}/maxresdefault.jpg`;
    }
 
-   // Gambar sisa untuk thumbnail kecil (hanya dari gallery upload)
    const remainingImages = gallery.slice(1, 4);
 
    return (
@@ -90,11 +131,10 @@ const FacilityItemCard = ({ item, index, onImageClick, locale }: ItemProps) => {
                         alt={name}
                         fill
                         className="object-cover transition-transform duration-700 group-hover:scale-110"
-                        // Tambahkan onError untuk handle jika maxresdefault youtube tidak tersedia (jarang terjadi)
                         onError={(e) => {
                            if (isYoutubeThumbnail) {
                               const target = e.target as HTMLImageElement;
-                              target.src = `https://img.youtube.com/vi/${youtube_id}/hqdefault.jpg`; // Fallback ke kualitas medium
+                              target.src = `https://img.youtube.com/vi/${youtube_id}/hqdefault.jpg`;
                            }
                         }}
                      />
@@ -102,7 +142,6 @@ const FacilityItemCard = ({ item, index, onImageClick, locale }: ItemProps) => {
                      {/* Overlay Icon */}
                      <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                         <div className="bg-white/90 backdrop-blur p-4 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
-                           {/* Jika ini thumbnail youtube, tampilkan icon Play, jika gambar biasa tampilkan icon Image */}
                            {isYoutubeThumbnail ? (
                               <PlayCircle className="text-red-600" size={32} />
                            ) : (
@@ -118,7 +157,7 @@ const FacilityItemCard = ({ item, index, onImageClick, locale }: ItemProps) => {
                )}
             </div>
 
-            {/* Thumbnail Gallery (Hanya muncul jika ada foto tambahan di Strapi) */}
+            {/* Thumbnail Gallery */}
             {remainingImages.length > 0 && (
                <div className={`absolute -bottom-6 flex gap-3 ${isEven ? 'right-4 lg:-right-12' : 'left-4 lg:-left-12'}`}>
                   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
@@ -187,38 +226,41 @@ export default function FacilitiesListSection({ data, config, locale }: Faciliti
 
          <div className="container mx-auto max-w-7xl relative z-10">
 
-            {/* Header Section */}
-            <div className="text-center max-w-3xl mx-auto mb-12">
-               {config?.section_label && (
-                  <h2 className="text-sm font-bold tracking-[0.2em] text-yellow-500 uppercase mb-3">
-                     {config.section_label}
-                  </h2>
-               )}
-
-               <h3 className="text-3xl md:text-5xl font-extrabold text-gray-900 mb-6">
-                  {config?.title_main || "Fasilitas"} <br />
-                  {config?.title_highlight && (
-                     <span className="text-[#005320]">{config.title_highlight}</span>
+            {/* Header Section (Dengan Animasi Fade In) */}
+            <ScrollReveal delay={0}>
+               <div className="text-center max-w-3xl mx-auto mb-12">
+                  {config?.section_label && (
+                     <h2 className="text-sm font-bold tracking-[0.2em] text-yellow-500 uppercase mb-3">
+                        {config.section_label}
+                     </h2>
                   )}
-               </h3>
 
-               {config?.description && (
-                  <p className="text-gray-500 text-lg">
-                     {config.description}
-                  </p>
-               )}
-            </div>
+                  <h3 className="text-3xl md:text-5xl font-extrabold text-gray-900 mb-6">
+                     {config?.title_main || "Fasilitas"} <br />
+                     {config?.title_highlight && (
+                        <span className="text-[#005320]">{config.title_highlight}</span>
+                     )}
+                  </h3>
 
-            {/* List Facilities */}
+                  {config?.description && (
+                     <p className="text-gray-500 text-lg">
+                        {config.description}
+                     </p>
+                  )}
+               </div>
+            </ScrollReveal>
+
+            {/* List Facilities (Setiap item dibungkus ScrollReveal) */}
             <div className="flex flex-col gap-20 md:gap-32">
                {currentItems.map((item, index) => (
-                  <FacilityItemCard
-                     key={index}
-                     index={index}
-                     item={item}
-                     locale={locale}
-                     onImageClick={setSelectedImage}
-                  />
+                  <ScrollReveal key={index} delay={(index % 3) * 100}>
+                     <FacilityItemCard
+                        item={item}
+                        index={index}
+                        locale={locale}
+                        onImageClick={setSelectedImage}
+                     />
+                  </ScrollReveal>
                ))}
             </div>
 

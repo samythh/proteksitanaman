@@ -34,12 +34,17 @@ const nextConfig = {
         port: "1337",
         pathname: "/uploads/**",
       },
-      // Domain Backend (Simpan saja untuk jaga-jaga)
+      // Domain Backend
       {
         protocol: "https",
         hostname: "api.backendn8n.cloud",
         port: "",
         pathname: "/uploads/**",
+      },
+      // ✅ TAMBAHAN BARU: Izin untuk Thumbnail YouTube
+      {
+        protocol: "https",
+        hostname: "img.youtube.com",
       },
     ],
     minimumCacheTTL: 604800,

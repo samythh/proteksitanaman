@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 
 // --- TYPE DEFINITIONS ---
 interface DocFile {
@@ -35,60 +35,84 @@ interface DocumentSectionProps {
 }
 
 export default function DocumentSection({ data }: DocumentSectionProps) {
-   const categories = data.categories || [];
+   // ✅ FIX 1: Gunakan useMemo untuk 'categories' agar referensinya stabil
+   // Ini menyelesaikan warning: "The 'categories' logical expression could make the dependencies of useMemo Hook change on every render"
+   const categories = useMemo(() => data.categories || [], [data.categories]);
 
    const [activeCategoryIndex, setActiveCategoryIndex] = useState(0);
    const [searchTerm, setSearchTerm] = useState("");
    const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
-   // ENVIRONMENT VARIABLE
    const STRAPI_URL = process.env.NEXT_PUBLIC_STRAPI_API_URL || "http://localhost:1337";
 
-   if (!categories.length) return null;
+   // --- 1. LOGIKA SEARCH GLOBAL & DISPLAY CONTENT ---
+   const displayedContent = useMemo(() => {
+      // Jika tidak ada data sama sekali
+      if (!categories.length) return [];
 
-   const activeCategory = categories[activeCategoryIndex];
+      // A. JIKA ADA PENCARIAN (GLOBAL SEARCH)
+      if (searchTerm.trim() !== "") {
+         const term = searchTerm.toLowerCase();
+         const globalResults: DocGroup[] = [];
 
-   // Logic Search
-   const filteredGroups = activeCategory.groups.map(group => {
-      if (!searchTerm) return group;
-      const filteredFiles = group.files.filter(file =>
-         file.title.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      const isGroupMatch = group.group_name.toLowerCase().includes(searchTerm.toLowerCase());
+         // Loop semua kategori
+         categories.forEach((cat) => {
+            const groups = cat.groups || []; // Safety check
+            groups.forEach((group) => {
+               const files = group.files || []; // Safety check
 
-      if (isGroupMatch) return group;
-      return { ...group, files: filteredFiles };
-   }).filter(group => group.files.length > 0 || group.group_name.toLowerCase().includes(searchTerm.toLowerCase()));
+               // Cari file yang cocok
+               const matchingFiles = files.filter(f =>
+                  (f.title || "").toLowerCase().includes(term)
+               );
 
-   // ✅ PERBAIKAN DI SINI: Helper URL & Extension
+               // Jika ada file cocok, atau nama grup cocok
+               const isGroupMatch = (group.group_name || "").toLowerCase().includes(term);
+
+               if (matchingFiles.length > 0 || isGroupMatch) {
+                  globalResults.push({
+                     ...group,
+                     // Tambahkan info kategori ke nama grup agar user tahu ini dari mana
+                     group_name: `${cat.name} — ${group.group_name}`,
+                     files: matchingFiles.length > 0 ? matchingFiles : files
+                  });
+               }
+            });
+         });
+
+         return globalResults;
+      }
+
+      // B. JIKA TIDAK ADA PENCARIAN (NORMAL VIEW)
+      const activeCat = categories[activeCategoryIndex];
+      // Safety check: jika activeCat undefined atau groups kosong
+      return activeCat?.groups || [];
+
+   }, [categories, searchTerm, activeCategoryIndex]);
+
+
+   // --- HELPER FUNCTIONS ---
    // eslint-disable-next-line @typescript-eslint/no-explicit-any
    const getFileInfo = (fileData: any) => {
-      // JANGAN return null. Return object dengan nilai null/kosong agar tidak crash.
       if (!fileData) return { url: null, ext: "" };
-
       const rawUrl = fileData.url || fileData.data?.attributes?.url || null;
       const ext = fileData.ext || fileData.data?.attributes?.ext || "";
       return { url: rawUrl, ext: ext.toLowerCase() };
    };
 
-   // FUNGSI PAKSA DOWNLOAD
    const handleDownload = async (url: string, filename: string, fileId: number) => {
       try {
          setDownloadingId(fileId);
-
          const response = await fetch(url);
          const blob = await response.blob();
          const blobUrl = window.URL.createObjectURL(blob);
-
          const link = document.createElement('a');
          link.href = blobUrl;
          link.download = filename;
-
          document.body.appendChild(link);
          link.click();
          document.body.removeChild(link);
          window.URL.revokeObjectURL(blobUrl);
-
       } catch (error) {
          console.error("Gagal mendownload file:", error);
          window.open(url, '_blank');
@@ -96,6 +120,8 @@ export default function DocumentSection({ data }: DocumentSectionProps) {
          setDownloadingId(null);
       }
    };
+
+   if (!categories.length) return null;
 
    return (
       <section className="container mx-auto px-6 md:px-16 lg:px-24 py-12 md:py-20 bg-gray-50 min-h-screen">
@@ -116,7 +142,7 @@ export default function DocumentSection({ data }: DocumentSectionProps) {
             <div className="relative w-full md:w-80">
                <input
                   type="text"
-                  placeholder="Cari dokumen..."
+                  placeholder="Cari di semua kategori..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all shadow-sm"
@@ -130,7 +156,7 @@ export default function DocumentSection({ data }: DocumentSectionProps) {
          <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
 
             {/* 2. SIDEBAR NAVIGATION */}
-            <aside className="w-full lg:w-1/4 flex-shrink-0">
+            <aside className={`w-full lg:w-1/4 flex-shrink-0 transition-opacity ${searchTerm ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-2 sticky top-24">
                   <div className="flex lg:flex-col overflow-x-auto lg:overflow-visible gap-1 pb-2 lg:pb-0 scrollbar-hide">
                      {categories.map((cat, index) => {
@@ -163,26 +189,34 @@ export default function DocumentSection({ data }: DocumentSectionProps) {
             {/* 3. CONTENT AREA */}
             <div className="w-full lg:w-3/4 min-h-[400px]">
 
-               {filteredGroups.length > 0 ? (
+               {/* Indikator Hasil Pencarian Global */}
+               {searchTerm && (
+                  <div className="mb-4 text-sm text-gray-500">
+                     {/* ✅ FIX 2: Ganti "..." dengan &quot;...&quot; */}
+                     Menampilkan hasil pencarian untuk <span className="font-bold text-gray-900">&quot;{searchTerm}&quot;</span> dari semua kategori:
+                  </div>
+               )}
+
+               {displayedContent.length > 0 ? (
                   <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                     {filteredGroups.map((group, gIndex) => (
+                     {displayedContent.map((group, gIndex) => (
                         <div key={group.id || gIndex} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
 
                            {/* Group Header */}
                            <div className="bg-gray-50/80 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                               <h3 className="font-bold text-gray-800 text-lg">
-                                 {group.group_name}
+                                 {group.group_name || "Untitled Group"}
                               </h3>
                               <span className="text-xs font-medium text-gray-500 bg-white px-2 py-1 rounded border border-gray-200">
-                                 {group.files.length} Dokumen
+                                 {group.files?.length || 0} Dokumen
                               </span>
                            </div>
 
                            {/* List Files */}
                            <div className="divide-y divide-gray-50">
-                              {group.files.map((file, fIndex) => {
-                                 // Ini sekarang aman karena getFileInfo pasti return object
+                              {(group.files || []).map((file, fIndex) => {
                                  const { url, ext } = getFileInfo(file.file);
+                                 const safeTitle = file.title || "Dokumen Tanpa Judul";
 
                                  let fullUrl = null;
                                  if (url) {
@@ -195,7 +229,8 @@ export default function DocumentSection({ data }: DocumentSectionProps) {
 
                                  const canPreview = [".pdf", ".jpg", ".jpeg", ".png"].includes(ext);
                                  const isDownloading = downloadingId === file.id;
-                                 const downloadFilename = `${file.title.replace(/\s+/g, '_')}${ext}`;
+
+                                 const downloadFilename = `${safeTitle.replace(/\s+/g, '_')}${ext}`;
 
                                  return (
                                     <div key={file.id || fIndex} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-green-50/30 transition-colors group">
@@ -211,7 +246,7 @@ export default function DocumentSection({ data }: DocumentSectionProps) {
                                           </div>
                                           <div>
                                              <h4 className="text-gray-800 font-medium group-hover:text-green-700 transition-colors">
-                                                {file.title}
+                                                {safeTitle}
                                              </h4>
                                              {file.date && (
                                                 <p className="text-xs text-gray-400 mt-1">Updated: {file.date}</p>
@@ -245,11 +280,11 @@ export default function DocumentSection({ data }: DocumentSectionProps) {
                                                 onClick={() => handleDownload(fullUrl!, downloadFilename, file.id)}
                                                 disabled={isDownloading}
                                                 className={`flex items-center justify-center gap-2 px-3 py-2 border rounded-lg text-sm font-semibold transition-all whitespace-nowrap
-                                  ${isDownloading
+                                      ${isDownloading
                                                       ? "bg-gray-100 text-gray-400 border-gray-200 cursor-wait"
                                                       : "bg-white text-gray-600 border-gray-200 hover:bg-green-600 hover:text-white hover:border-green-600 hover:shadow-md"
                                                    }
-                                `}
+                                    `}
                                                 title="Unduh Dokumen"
                                              >
                                                 {isDownloading ? (
@@ -289,13 +324,20 @@ export default function DocumentSection({ data }: DocumentSectionProps) {
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
                      </div>
                      <h3 className="text-lg font-bold text-gray-900">Dokumen tidak ditemukan</h3>
-                     <p className="text-gray-500 mt-2">Coba kata kunci lain atau ganti kategori di menu sebelah kiri.</p>
-                     <button
-                        onClick={() => setSearchTerm("")}
-                        className="mt-6 text-green-600 font-medium hover:underline"
-                     >
-                        Reset Pencarian
-                     </button>
+                     <p className="text-gray-500 mt-2">
+                        {/* ✅ FIX 3: Ganti "..." dengan &quot;...&quot; */}
+                        {searchTerm
+                           ? <>Tidak ada hasil untuk <span className="font-bold">&quot;{searchTerm}&quot;</span> di semua kategori.</>
+                           : "Kategori ini belum memiliki dokumen."}
+                     </p>
+                     {searchTerm && (
+                        <button
+                           onClick={() => setSearchTerm("")}
+                           className="mt-6 text-green-600 font-medium hover:underline"
+                        >
+                           Reset Pencarian
+                        </button>
+                     )}
                   </div>
                )}
 
