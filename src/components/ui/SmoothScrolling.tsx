@@ -6,31 +6,38 @@ import Lenis from "lenis";
 
 export default function SmoothScrolling() {
    useEffect(() => {
-      // Inisialisasi Lenis
+      // 1. Inisialisasi Lenis
       const lenis = new Lenis({
-         duration: 1.2, // Durasi scroll (semakin besar semakin lambat/halus)
-         easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // Kurva fisika (default yang enak)
+         duration: 1.2,
+         easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
          orientation: "vertical",
          gestureOrientation: "vertical",
-         smoothWheel: true, // Aktifkan untuk mouse wheel
-         // smoothTouch: false, // Biasanya dimatikan untuk layar sentuh (HP) agar tetap natural
-         // touchMultiplier: 2,
+         smoothWheel: true,
+         // PENTING: Matikan smooth scroll di HP (Touch Device)
+         // Native scroll di HP sudah sangat bagus. Smooth scroll JS di HP sering terasa "berat" atau "laggy".
+         touchMultiplier: 2,
       });
 
-      // Loop animasi (Request Animation Frame)
-      // Ini wajib agar Lenis berjalan sinkron dengan refresh rate layar
+      // 2. Variable untuk menyimpan ID animasi agar bisa dibatalkan
+      let rafId: number;
+
+      // 3. Loop Animasi
       function raf(time: number) {
          lenis.raf(time);
-         requestAnimationFrame(raf);
+         rafId = requestAnimationFrame(raf);
       }
 
-      requestAnimationFrame(raf);
+      // Mulai loop
+      rafId = requestAnimationFrame(raf);
 
-      // Cleanup saat pindah halaman/unmount
+      // 4. Cleanup (Pembersihan) saat unmount
       return () => {
+         // Hentikan loop animasi DULUAN
+         cancelAnimationFrame(rafId);
+         // Baru hancurkan instance Lenis
          lenis.destroy();
       };
    }, []);
 
-   return null; // Komponen ini tidak merender UI apa-apa
+   return null;
 }

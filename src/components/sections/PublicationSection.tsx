@@ -1,13 +1,21 @@
 // File: src/components/sections/PublicationSection.tsx
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { createPortal } from "react-dom";
 import Image from "next/image";
 import { getStrapiMedia } from "@/lib/strapi/utils";
+import { createPortal } from "react-dom";
+import { X, BookOpen, ExternalLink, Award, FileText } from "lucide-react";
 
 // --- TYPE DEFINITIONS ---
+interface StrapiImage {
+   url?: string;
+   data?: {
+      attributes?: { url: string };
+      url?: string;
+   };
+}
+
 interface PublicationItem {
    id: number;
    category: "journal" | "book" | "patent" | "proceeding";
@@ -18,8 +26,7 @@ interface PublicationItem {
    description?: string;
    tag?: string;
    url?: string;
-   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-   image: any;
+   image: StrapiImage;
 }
 
 interface PublicationSectionData {
@@ -32,51 +39,50 @@ interface PublicationSectionProps {
    data: PublicationSectionData;
 }
 
-// --- OPTIMIZED SUB-COMPONENTS ---
+// --- SUB-COMPONENTS (Cards) ---
 
-// 1. JURNAL CARD (Updated: Dengan Tombol Hijau Solid)
+// 1. JURNAL CARD
 const JournalCard = React.memo(({ item, imgUrl, onOpen }: { item: PublicationItem, imgUrl: string | null, onOpen: () => void }) => (
-   <div className="col-span-1 md:col-span-2 bg-white border border-gray-200 rounded-lg p-4 flex flex-col md:flex-row gap-4 hover:border-green-500 transition-colors duration-200">
+   <div className="col-span-1 md:col-span-2 bg-white border border-gray-200 rounded-xl p-5 flex flex-col md:flex-row gap-5 hover:border-green-500 hover:shadow-md transition-all duration-300 group">
       <div
-         className={`w-full md:w-32 h-44 flex-shrink-0 relative rounded bg-gray-100 overflow-hidden ${imgUrl ? 'cursor-pointer' : ''}`}
+         className={`w-full md:w-36 h-48 flex-shrink-0 relative rounded-lg bg-gray-100 overflow-hidden border border-gray-100 ${imgUrl ? 'cursor-pointer' : ''}`}
          onClick={onOpen}
       >
          {imgUrl ? (
             <Image
                src={imgUrl} alt={item.title} fill
-               loading="lazy"
-               sizes="(max-width: 768px) 100vw, 150px"
-               className="object-cover"
+               loading="lazy" sizes="(max-width: 768px) 100vw, 150px"
+               className="object-cover transition-transform duration-500 group-hover:scale-105"
             />
          ) : (
-            <div className="flex items-center justify-center h-full text-gray-400 font-bold text-[10px]">NO IMAGE</div>
+            <div className="flex items-center justify-center h-full text-gray-400 font-bold text-xs flex-col gap-2">
+               <FileText size={24} />
+               <span>NO IMAGE</span>
+            </div>
          )}
       </div>
       <div className="flex-1 flex flex-col min-h-[160px]">
-         <div className="flex items-center gap-2 mb-1">
-            <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 text-[9px] font-bold rounded uppercase border border-blue-100">Jurnal</span>
-            <span className="text-[10px] text-gray-500 font-mono">{item.year}</span>
+         <div className="flex items-center gap-2 mb-2">
+            <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-bold rounded uppercase border border-blue-100 tracking-wide">
+               Jurnal
+            </span>
+            <span className="text-xs text-gray-500 font-mono">{item.year}</span>
          </div>
-         <h3 className="text-base font-bold text-gray-900 mb-1 leading-tight line-clamp-2">{item.title}</h3>
-         <p className="text-[10px] font-semibold text-gray-600 mb-2">{item.subtitle}</p>
-         <p className="text-xs text-gray-500 line-clamp-3 mb-3 flex-grow text-justify leading-relaxed">
+         <h3 className="text-lg font-bold text-gray-900 mb-1 leading-snug line-clamp-2 group-hover:text-green-700 transition-colors">
+            {item.title}
+         </h3>
+         <p className="text-xs font-semibold text-gray-600 mb-3">{item.subtitle}</p>
+         <p className="text-sm text-gray-500 line-clamp-3 mb-4 flex-grow text-justify leading-relaxed">
             {item.description}
          </p>
 
-         {/* TOMBOL BUKA JURNAL */}
          {item.url && (
             <a
-               href={item.url}
-               target="_blank"
-               rel="noreferrer"
-               className="mt-auto inline-flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white text-xs font-bold rounded-lg hover:bg-green-700 transition-colors duration-200 w-full md:w-fit shadow-sm"
+               href={item.url} target="_blank" rel="noreferrer"
+               className="mt-auto inline-flex items-center justify-center gap-2 px-5 py-2 bg-[#005320] text-white text-xs font-bold rounded-lg hover:bg-green-800 transition-colors shadow-sm w-full md:w-fit"
             >
                <span>Buka Jurnal</span>
-               <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                  <polyline points="15 3 21 3 21 9" />
-                  <line x1="10" y1="14" x2="21" y2="3" />
-               </svg>
+               <ExternalLink size={12} />
             </a>
          )}
       </div>
@@ -84,9 +90,9 @@ const JournalCard = React.memo(({ item, imgUrl, onOpen }: { item: PublicationIte
 ));
 JournalCard.displayName = "JournalCard";
 
-// 2. BOOK CARD (Optimized: No Blur)
+// 2. BOOK CARD
 const BookCard = React.memo(({ item, imgUrl, onOpen }: { item: PublicationItem, imgUrl: string | null, onOpen: () => void }) => (
-   <div className="bg-white border border-gray-200 rounded-lg overflow-hidden h-full flex flex-col hover:border-green-500 transition-colors duration-200">
+   <div className="bg-white border border-gray-200 rounded-xl overflow-hidden h-full flex flex-col hover:border-green-500 hover:shadow-md transition-all duration-300 group">
       <div
          className={`relative w-full aspect-[3/4] bg-gray-100 overflow-hidden ${imgUrl ? 'cursor-pointer' : ''}`}
          onClick={onOpen}
@@ -94,20 +100,23 @@ const BookCard = React.memo(({ item, imgUrl, onOpen }: { item: PublicationItem, 
          {imgUrl ? (
             <Image
                src={imgUrl} alt={item.title} fill
-               loading="lazy"
-               sizes="(max-width: 768px) 50vw, 20vw"
-               className="object-cover"
+               loading="lazy" sizes="(max-width: 768px) 50vw, 20vw"
+               className="object-cover transition-transform duration-500 group-hover:scale-105"
             />
          ) : (
-            <div className="flex items-center justify-center h-full text-2xl opacity-30">📚</div>
+            <div className="flex items-center justify-center h-full text-gray-300">
+               <BookOpen size={48} />
+            </div>
          )}
-         <div className="absolute top-0 right-0 bg-white/90 text-gray-900 text-[9px] font-bold px-2 py-1 rounded-bl shadow-sm">
+         <div className="absolute top-0 right-0 bg-white/95 text-gray-900 text-[10px] font-bold px-3 py-1 rounded-bl-lg shadow-sm border-b border-l border-gray-100">
             {item.year}
          </div>
       </div>
-      <div className="p-3 flex-grow flex flex-col">
-         <h3 className="text-sm font-bold text-gray-900 mb-2 leading-snug line-clamp-2">{item.title}</h3>
-         <div className="mt-auto space-y-0.5 text-[10px] text-gray-500">
+      <div className="p-4 flex-grow flex flex-col bg-white">
+         <h3 className="text-sm font-bold text-gray-900 mb-3 leading-snug line-clamp-2 group-hover:text-green-700 transition-colors">
+            {item.title}
+         </h3>
+         <div className="mt-auto space-y-1 text-xs text-gray-500">
             <p><span className="font-semibold text-gray-700">Penulis:</span> {item.subtitle}</p>
             <p><span className="font-semibold text-gray-700">Penerbit:</span> {item.extra_info}</p>
          </div>
@@ -116,39 +125,40 @@ const BookCard = React.memo(({ item, imgUrl, onOpen }: { item: PublicationItem, 
 ));
 BookCard.displayName = "BookCard";
 
-// 3. PATENT CARD (Optimized: No Heavy Shadow)
+// 3. PATENT CARD
 const PatentCard = React.memo(({ item, imgUrl, onOpen }: { item: PublicationItem, imgUrl: string | null, onOpen: () => void }) => (
-   <div className="bg-white border border-orange-200 rounded-lg p-3 h-full flex flex-col relative overflow-hidden hover:border-orange-400 transition-colors duration-200">
-      <div className="flex items-start gap-3 mb-2">
+   <div className="bg-white border border-orange-200 rounded-xl p-4 h-full flex flex-col relative overflow-hidden hover:border-orange-400 hover:shadow-md transition-all duration-300 group">
+      <div className="flex items-start gap-3 mb-3">
          <div
-            className={`w-16 h-16 relative rounded border border-gray-200 overflow-hidden flex-shrink-0 bg-white ${imgUrl ? 'cursor-pointer' : ''}`}
+            className={`w-14 h-14 relative rounded-lg border border-gray-200 overflow-hidden flex-shrink-0 bg-white ${imgUrl ? 'cursor-pointer' : ''}`}
             onClick={onOpen}
          >
             {imgUrl ? (
                <Image
                   src={imgUrl} alt="Sertifikat" fill
-                  loading="lazy"
-                  sizes="64px"
+                  loading="lazy" sizes="64px"
                   className="object-cover"
                />
             ) : (
-               <div className="w-full h-full bg-orange-50 flex items-center justify-center text-sm opacity-50">📜</div>
+               <div className="w-full h-full bg-orange-50 flex items-center justify-center text-orange-300">
+                  <Award size={24} />
+               </div>
             )}
          </div>
          <div>
             {item.tag && (
-               <span className="inline-block px-1.5 py-0.5 bg-orange-50 text-orange-700 text-[9px] font-bold uppercase rounded mb-1 border border-orange-100">
+               <span className="inline-block px-2 py-0.5 bg-orange-50 text-orange-700 text-[9px] font-bold uppercase rounded mb-1 border border-orange-100">
                   {item.tag}
                </span>
             )}
-            <h4 className="text-[9px] font-mono text-gray-400 break-all">{item.subtitle}</h4>
+            <h4 className="text-[10px] font-mono text-gray-400 break-all">{item.subtitle}</h4>
          </div>
       </div>
-      <h3 className="text-xs font-bold text-gray-900 mb-2 leading-snug relative z-10 line-clamp-3">
+      <h3 className="text-sm font-bold text-gray-900 mb-3 leading-snug relative z-10 line-clamp-3 group-hover:text-orange-700 transition-colors">
          {item.title}
       </h3>
-      <div className="text-[9px] text-gray-500 relative z-10 border-t border-orange-50 pt-2 mt-auto">
-         <span className="block font-bold text-gray-700">Pematen:</span>
+      <div className="text-xs text-gray-500 relative z-10 border-t border-orange-50 pt-3 mt-auto">
+         <span className="block font-bold text-gray-700 mb-0.5">Pematen:</span>
          {item.extra_info}
       </div>
    </div>
@@ -157,17 +167,21 @@ PatentCard.displayName = "PatentCard";
 
 // 4. PROCEEDING CARD
 const ProceedingCard = React.memo(({ item }: { item: PublicationItem }) => (
-   <div className="bg-white border-l-4 border-l-purple-500 border border-gray-200 rounded-r-lg p-3 flex flex-col h-full hover:bg-gray-50 transition-colors duration-200">
-      <div className="flex justify-between items-start mb-1">
-         <div className="text-[9px] font-bold text-purple-600 uppercase">Prosiding</div>
-         <div className="text-[9px] font-mono text-gray-400">{item.year}</div>
+   <div className="bg-white border-l-4 border-l-purple-500 border border-gray-200 rounded-r-xl p-4 flex flex-col h-full hover:bg-gray-50 hover:shadow-sm transition-all duration-300 group">
+      <div className="flex justify-between items-start mb-2">
+         <div className="text-[10px] font-bold text-purple-600 uppercase tracking-wide bg-purple-50 px-2 py-0.5 rounded">
+            Prosiding
+         </div>
+         <div className="text-[10px] font-mono text-gray-400">{item.year}</div>
       </div>
-      <h3 className="text-sm font-bold text-gray-900 mb-2 line-clamp-2">{item.title}</h3>
-      <div className="mt-auto flex items-center gap-2 text-[10px] text-gray-500">
-         <span>📍 {item.subtitle}</span>
+      <h3 className="text-sm font-bold text-gray-900 mb-3 line-clamp-2 leading-snug group-hover:text-purple-700 transition-colors">
+         {item.title}
+      </h3>
+      <div className="mt-auto flex items-start gap-2 text-xs text-gray-500">
+         <span className="line-clamp-2">📍 {item.subtitle}</span>
       </div>
       {item.url && (
-         <a href={item.url} target="_blank" rel="noreferrer" className="mt-2 w-full py-1 text-center text-[10px] font-bold text-purple-600 border border-purple-200 rounded hover:bg-purple-50 transition-colors">
+         <a href={item.url} target="_blank" rel="noreferrer" className="mt-3 w-full py-1.5 text-center text-xs font-bold text-purple-600 border border-purple-200 rounded hover:bg-purple-600 hover:text-white transition-all">
             Lihat Artikel
          </a>
       )}
@@ -179,7 +193,6 @@ ProceedingCard.displayName = "ProceedingCard";
 // --- MAIN COMPONENT ---
 
 export default function PublicationSection({ data }: PublicationSectionProps) {
-   // Memoize Items agar tidak dihitung ulang tiap render (Fix ESLint Dependency)
    const items = useMemo(() => data.items || [], [data.items]);
 
    const [activeTab, setActiveTab] = useState<string>("all");
@@ -192,6 +205,8 @@ export default function PublicationSection({ data }: PublicationSectionProps) {
       setVisibleCount(8);
    };
 
+   // Jika ada gambar (modal buka) -> Lock scroll.
+   // Jika null (modal tutup) -> Unlock scroll.
    useEffect(() => {
       if (selectedImage) {
          document.body.style.overflow = "hidden";
@@ -221,9 +236,8 @@ export default function PublicationSection({ data }: PublicationSectionProps) {
       setSelectedCaption("");
    };
 
-   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-   const getImageUrl = (img: any) => {
-      const raw = img?.url || img?.data?.attributes?.url;
+   const getImageUrl = (img: StrapiImage): string | null => {
+      const raw = img?.url || img?.data?.attributes?.url || img?.data?.url;
       return getStrapiMedia(raw);
    };
 
@@ -231,16 +245,24 @@ export default function PublicationSection({ data }: PublicationSectionProps) {
 
    return (
       <>
-         <section className="container mx-auto px-6 md:px-16 lg:px-24 py-12 md:py-20 bg-white">
+         <section className="container mx-auto px-4 md:px-8 lg:px-12 py-16 md:py-24 bg-white">
 
             {/* HEADER */}
-            <div className="text-center max-w-3xl mx-auto mb-8">
-               {data.title && <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{data.title}</h2>}
-               {data.subtitle && <p className="text-gray-500 text-sm md:text-base">{data.subtitle}</p>}
+            <div className="text-center max-w-3xl mx-auto mb-10">
+               {data.title && (
+                  <h2 className="text-2xl md:text-3xl font-bold text-[#005320] mb-3">
+                     {data.title}
+                  </h2>
+               )}
+               {data.subtitle && (
+                  <p className="text-gray-500 text-sm md:text-base leading-relaxed">
+                     {data.subtitle}
+                  </p>
+               )}
             </div>
 
             {/* TABS */}
-            <div className="flex flex-wrap justify-center gap-2 mb-8">
+            <div className="flex flex-wrap justify-center gap-2 mb-10">
                {[
                   { id: "all", label: "Semua" },
                   { id: "journal", label: "Jurnal" },
@@ -251,10 +273,11 @@ export default function PublicationSection({ data }: PublicationSectionProps) {
                   <button
                      key={tab.id}
                      onClick={() => handleTabChange(tab.id)}
-                     className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-colors duration-200
+                     className={`
+                px-5 py-2 rounded-full text-xs font-bold border transition-all duration-300
                 ${activeTab === tab.id
-                           ? "bg-green-600 text-white border-green-600"
-                           : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                           ? "bg-[#005320] text-white border-[#005320] shadow-md transform scale-105"
+                           : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
                         }
               `}
                   >
@@ -263,8 +286,8 @@ export default function PublicationSection({ data }: PublicationSectionProps) {
                ))}
             </div>
 
-            {/* GRID CONTENT (Optimized Rendering) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" style={{ contentVisibility: 'auto' }}>
+            {/* GRID CONTENT */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 content-visibility-auto">
                {visibleItems.map((item, index) => {
                   const imgUrl = getImageUrl(item.image);
 
@@ -289,10 +312,10 @@ export default function PublicationSection({ data }: PublicationSectionProps) {
 
             {/* LOAD MORE BUTTON */}
             {hasMore && (
-               <div className="mt-10 text-center">
+               <div className="mt-12 text-center">
                   <button
                      onClick={() => setVisibleCount((prev) => prev + 8)}
-                     className="px-5 py-2.5 bg-white border border-gray-300 text-gray-600 text-xs font-bold rounded-full hover:border-green-500 hover:text-green-600 transition-colors"
+                     className="px-8 py-3 bg-white border-2 border-gray-200 text-gray-600 text-sm font-bold rounded-full hover:border-[#005320] hover:text-[#005320] transition-all shadow-sm hover:shadow-md"
                   >
                      Muat Lebih Banyak
                   </button>
@@ -304,25 +327,35 @@ export default function PublicationSection({ data }: PublicationSectionProps) {
          {/* LIGHTBOX PORTAL */}
          {selectedImage && typeof document !== "undefined" && createPortal(
             <div
-               className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/90 p-4"
+               className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/95 backdrop-blur-sm p-4 animate-in fade-in duration-300"
                onClick={closeLightbox}
             >
                <button
                   onClick={closeLightbox}
-                  className="absolute top-4 right-4 text-white/80 hover:text-white p-2"
+                  className="absolute top-6 right-6 text-white/70 hover:text-white p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  <X size={32} />
                </button>
 
                <div
-                  className="relative w-full max-w-4xl h-[80vh] flex flex-col items-center justify-center"
+                  className="relative w-full max-w-5xl h-[85vh] flex flex-col items-center justify-center pointer-events-none"
                   onClick={(e) => e.stopPropagation()}
                >
-                  <div className="relative w-full h-full">
-                     <Image src={selectedImage} alt="Popup" fill className="object-contain" sizes="100vw" priority />
+                  <div className="relative w-full h-full pointer-events-auto">
+                     <Image
+                        src={selectedImage}
+                        alt="Popup"
+                        fill
+                        className="object-contain"
+                        sizes="100vw"
+                        priority
+                        quality={100}
+                     />
                   </div>
                   {selectedCaption && (
-                     <p className="mt-4 text-white text-sm text-center">{selectedCaption}</p>
+                     <p className="mt-4 text-white text-base font-medium text-center bg-black/50 px-6 py-2 rounded-full backdrop-blur-md pointer-events-auto">
+                        {selectedCaption}
+                     </p>
                   )}
                </div>
             </div>,

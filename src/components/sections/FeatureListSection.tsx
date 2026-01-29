@@ -1,5 +1,3 @@
-// File: src/components/sections/FeatureListSection.tsx
-
 "use client";
 
 import React from "react";
@@ -28,7 +26,7 @@ interface FeatureListSectionProps {
 }
 
 export default function FeatureListSection({ data }: FeatureListSectionProps) {
-
+   // Helper untuk mengekstrak URL gambar
    // eslint-disable-next-line @typescript-eslint/no-explicit-any
    const getRawUrl = (img: any): string | null => {
       if (!img) return null;
@@ -43,29 +41,32 @@ export default function FeatureListSection({ data }: FeatureListSectionProps) {
 
    const rawImgUrl = getRawUrl(data.image);
    const imgUrl = getStrapiMedia(rawImgUrl);
-   const altText = data.image?.alternativeText || data.image?.data?.attributes?.alternativeText || "Feature Image";
+   const altText =
+      data.image?.alternativeText ||
+      data.image?.data?.attributes?.alternativeText ||
+      "Feature Image";
 
    if (!items.length) return null;
 
    return (
-      <section className="container mx-auto px-6 md:px-16 lg:px-24 py-12 md:py-24">
+      <section className="container mx-auto px-4 md:px-8 lg:px-12 py-16 md:py-24">
 
          {/* 1. Header Section */}
          <div className="max-w-3xl mb-12 md:mb-16">
             {title && (
-               // ✅ UPDATE: Menambahkan border-l-4 border-green-600 pl-4
                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 border-l-4 border-green-600 pl-4">
                   {title}
                </h2>
             )}
             {data.subtitle && (
-               <p className="text-gray-600 text-lg mt-4 leading-relaxed">{data.subtitle}</p>
+               <p className="text-gray-600 text-lg mt-4 leading-relaxed">
+                  {data.subtitle}
+               </p>
             )}
          </div>
 
          {/* Grid Layout */}
          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
-
             {/* 2. Left Column: Image */}
             <div className="lg:col-span-7 relative w-full">
                {imgUrl ? (
@@ -75,6 +76,7 @@ export default function FeatureListSection({ data }: FeatureListSectionProps) {
                         alt={altText}
                         fill
                         className="object-cover transition-transform duration-700 group-hover:scale-105"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 60vw, 50vw"
                      />
                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
                   </div>
@@ -116,7 +118,9 @@ export default function FeatureListSection({ data }: FeatureListSectionProps) {
                         {/* Text Content */}
                         <div className="flex-1">
                            {item.title && (
-                              <h4 className="font-bold text-gray-900 text-lg mb-1">{item.title}</h4>
+                              <h4 className="font-bold text-gray-900 text-lg mb-1">
+                                 {item.title}
+                              </h4>
                            )}
                            <p className="text-gray-600 text-sm leading-relaxed">
                               {item.text}
@@ -126,7 +130,6 @@ export default function FeatureListSection({ data }: FeatureListSectionProps) {
                   );
                })}
             </div>
-
          </div>
       </section>
    );

@@ -1,5 +1,3 @@
-// File: src/components/sections/DocumentSection.tsx
-
 "use client";
 
 import React, { useState, useMemo } from "react";
@@ -27,6 +25,7 @@ interface DocCategory {
 
 interface DocumentSectionData {
    title?: string;
+   subtitle?: string; 
    categories: DocCategory[];
 }
 
@@ -35,8 +34,6 @@ interface DocumentSectionProps {
 }
 
 export default function DocumentSection({ data }: DocumentSectionProps) {
-   // ✅ FIX 1: Gunakan useMemo untuk 'categories' agar referensinya stabil
-   // Ini menyelesaikan warning: "The 'categories' logical expression could make the dependencies of useMemo Hook change on every render"
    const categories = useMemo(() => data.categories || [], [data.categories]);
 
    const [activeCategoryIndex, setActiveCategoryIndex] = useState(0);
@@ -47,7 +44,6 @@ export default function DocumentSection({ data }: DocumentSectionProps) {
 
    // --- 1. LOGIKA SEARCH GLOBAL & DISPLAY CONTENT ---
    const displayedContent = useMemo(() => {
-      // Jika tidak ada data sama sekali
       if (!categories.length) return [];
 
       // A. JIKA ADA PENCARIAN (GLOBAL SEARCH)
@@ -55,11 +51,10 @@ export default function DocumentSection({ data }: DocumentSectionProps) {
          const term = searchTerm.toLowerCase();
          const globalResults: DocGroup[] = [];
 
-         // Loop semua kategori
          categories.forEach((cat) => {
-            const groups = cat.groups || []; // Safety check
+            const groups = cat.groups || [];
             groups.forEach((group) => {
-               const files = group.files || []; // Safety check
+               const files = group.files || [];
 
                // Cari file yang cocok
                const matchingFiles = files.filter(f =>
@@ -72,7 +67,7 @@ export default function DocumentSection({ data }: DocumentSectionProps) {
                if (matchingFiles.length > 0 || isGroupMatch) {
                   globalResults.push({
                      ...group,
-                     // Tambahkan info kategori ke nama grup agar user tahu ini dari mana
+                     // Info kategori ditambahkan agar user tahu konteksnya
                      group_name: `${cat.name} — ${group.group_name}`,
                      files: matchingFiles.length > 0 ? matchingFiles : files
                   });
@@ -85,7 +80,6 @@ export default function DocumentSection({ data }: DocumentSectionProps) {
 
       // B. JIKA TIDAK ADA PENCARIAN (NORMAL VIEW)
       const activeCat = categories[activeCategoryIndex];
-      // Safety check: jika activeCat undefined atau groups kosong
       return activeCat?.groups || [];
 
    }, [categories, searchTerm, activeCategoryIndex]);
@@ -134,9 +128,13 @@ export default function DocumentSection({ data }: DocumentSectionProps) {
                      {data.title}
                   </h2>
                )}
-               <p className="text-gray-500 mt-2 text-sm pl-5">
-                  Pusat unduhan dokumen resmi, SK, SOP, dan panduan akademik.
-               </p>
+
+               {/* SUBTITLE DINAMIS: Hanya muncul jika ada isinya di Strapi */}
+               {data.subtitle && (
+                  <p className="text-gray-500 mt-2 text-sm pl-5">
+                     {data.subtitle}
+                  </p>
+               )}
             </div>
 
             <div className="relative w-full md:w-80">
@@ -192,7 +190,6 @@ export default function DocumentSection({ data }: DocumentSectionProps) {
                {/* Indikator Hasil Pencarian Global */}
                {searchTerm && (
                   <div className="mb-4 text-sm text-gray-500">
-                     {/* ✅ FIX 2: Ganti "..." dengan &quot;...&quot; */}
                      Menampilkan hasil pencarian untuk <span className="font-bold text-gray-900">&quot;{searchTerm}&quot;</span> dari semua kategori:
                   </div>
                )}
@@ -229,7 +226,6 @@ export default function DocumentSection({ data }: DocumentSectionProps) {
 
                                  const canPreview = [".pdf", ".jpg", ".jpeg", ".png"].includes(ext);
                                  const isDownloading = downloadingId === file.id;
-
                                  const downloadFilename = `${safeTitle.replace(/\s+/g, '_')}${ext}`;
 
                                  return (
@@ -280,11 +276,11 @@ export default function DocumentSection({ data }: DocumentSectionProps) {
                                                 onClick={() => handleDownload(fullUrl!, downloadFilename, file.id)}
                                                 disabled={isDownloading}
                                                 className={`flex items-center justify-center gap-2 px-3 py-2 border rounded-lg text-sm font-semibold transition-all whitespace-nowrap
-                                      ${isDownloading
+                                  ${isDownloading
                                                       ? "bg-gray-100 text-gray-400 border-gray-200 cursor-wait"
                                                       : "bg-white text-gray-600 border-gray-200 hover:bg-green-600 hover:text-white hover:border-green-600 hover:shadow-md"
                                                    }
-                                    `}
+                                `}
                                                 title="Unduh Dokumen"
                                              >
                                                 {isDownloading ? (
@@ -325,7 +321,6 @@ export default function DocumentSection({ data }: DocumentSectionProps) {
                      </div>
                      <h3 className="text-lg font-bold text-gray-900">Dokumen tidak ditemukan</h3>
                      <p className="text-gray-500 mt-2">
-                        {/* ✅ FIX 3: Ganti "..." dengan &quot;...&quot; */}
                         {searchTerm
                            ? <>Tidak ada hasil untuk <span className="font-bold">&quot;{searchTerm}&quot;</span> di semua kategori.</>
                            : "Kategori ini belum memiliki dokumen."}

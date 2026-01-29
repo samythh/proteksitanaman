@@ -1,85 +1,139 @@
 // File: src/lib/strapi/fetcher.ts
 import qs from "qs";
-import { getStrapiURL } from "./utils";
+import { CONFIG } from "@/lib/config";
+import { ZodSchema } from "zod";
 
+// --- 1. TYPE DEFINITIONS ---
 interface FetchOptions {
    headers?: Record<string, string>;
    noAuth?: boolean;
    cache?: RequestCache;
    next?: NextFetchRequestConfig;
+   timeout?: number;
 }
 
 type UrlParams = Record<string, unknown>;
 
-export async function fetchAPI(
+/**
+ * Custom Error Class untuk Strapi
+ * Memudahkan kita membedakan error network vs error dari API Strapi
+ */
+class StrapiError extends Error {
+   status: number;
+   payload: unknown;
+
+   constructor(message: string, status: number, payload: unknown) {
+      super(message);
+      this.name = "StrapiError";
+      this.status = status;
+      this.payload = payload;
+   }
+}
+
+// --- 2. MAIN FUNCTION (GENERIC TYPE <T>) ---
+/**
+ * Mengambil data dari Strapi API dengan validasi Zod opsional.
+ * @template T - Tipe data yang diharapkan (inferred dari Zod Schema jika ada)
+ * @param path - Endpoint API (contoh: "/articles")
+ * @param urlParamsObject - Query params (filter, populate, locale)
+ * @param options - Opsi fetch (cache, headers, auth)
+ * @param schema - (Opsional) Skema Zod untuk validasi data response
+ */
+export async function fetchAPI<T = unknown>(
    path: string,
    urlParamsObject: UrlParams = {},
-   options: FetchOptions = {}
-) {
+   options: FetchOptions = {},
+   schema?: ZodSchema<T> 
+): Promise<T> {
    try {
-      // Cek Token (Debugging)
-      const token = process.env.STRAPI_API_TOKEN;
-      if (!token && !options.noAuth) {
-         console.warn("⚠️ Peringatan: STRAPI_API_TOKEN tidak terbaca di .env!");
+      // A. Validasi Config (Early Return)
+      if (!options.noAuth && !CONFIG.API_TOKEN) {
+         if (CONFIG.IS_DEV) {
+            console.warn("⚠️ [Strapi] Token tidak ditemukan di config. Request mungkin gagal 403.");
+         }
       }
 
-      // 1. Siapkan Headers
+      // B. Build Headers
       const headers = {
          "Content-Type": "application/json",
-         ...(!options.noAuth && token
-            ? { Authorization: `Bearer ${token}` }
+         ...(!options.noAuth && CONFIG.API_TOKEN
+            ? { Authorization: `Bearer ${CONFIG.API_TOKEN}` }
             : {}),
          ...options.headers,
       };
 
-      // 2. Build Query String
+      // C. Build Query String
       const queryString = qs.stringify(urlParamsObject, {
          encodeValuesOnly: true,
+         arrayFormat: "indices", // Standar Strapi untuk array filtering
       });
 
-      // 3. Gabungkan URL
-      // Hasilnya akan seperti: http://202.10.34.176:1337/api/homepage?populate=...
-      const requestUrl = `${getStrapiURL(`/api${path}`)}${queryString ? `?${queryString}` : ""
-         }`;
+      // D. Construct URL
+      // Hapus slash di depan path jika user menambahkannya (defensive programming)
+      const cleanPath = path.startsWith("/") ? path.slice(1) : path;
+      const requestUrl = `${CONFIG.API_BASE_URL}/${cleanPath}${queryString ? `?${queryString}` : ""}`;
 
-      // --- DEBUG LOGGING (PENTING) ---
-      console.log("==========================================");
-      console.log(`📡 Fetching: ${requestUrl}`);
-      // console.log(`🔑 Token Preview: ${token?.substring(0, 10)}...`); // Uncomment jika ingin cek token
-      console.log("==========================================");
+      // --- DEBUG LOGGING (Hanya di Dev Mode) ---
+      // Log request normal (opsional, bisa dimatikan jika terlalu berisik)
+      if (CONFIG.IS_DEV) {
+         // console.log(`📡 [GET] ${requestUrl}`); 
+      }
 
-      // 4. Lakukan Fetch
+      // E. Execute Fetch
       const response = await fetch(requestUrl, {
          method: "GET",
          headers,
-         cache: options.cache || "no-store", // Bagus untuk development
+         cache: options.cache || "no-store", // Default ke dynamic fetching
          next: options.next,
       });
 
-      // 5. Handle Error
+      // F. Handle API Errors (Non-200 responses)
       if (!response.ok) {
-         const errorBody = await response.text();
-         console.error(`❌ Strapi Error [${response.status}]:`, errorBody);
-         throw new Error(
-            `Error Strapi ${response.status}: ${response.statusText} - ${errorBody}`
+         const errorBody = await response.json().catch(() => ({})); // Safe parse jika body bukan JSON
+
+         // 🔥🔥🔥 LOGGING TAMBAHAN (PENTING UNTUK DEBUGGING) 🔥🔥🔥
+         console.error("\n🛑 [STRAPI FETCH ERROR]");
+         console.error("   👉 URL Request:", requestUrl);
+         console.error("   👉 Status Code:", response.status, response.statusText);
+         console.error("   👉 Error Body :", JSON.stringify(errorBody, null, 2));
+         console.error("---------------------------------------------------\n");
+
+         // Jika error 404, kita bisa return null atau throw spesifik (tergantung strategi)
+         // Di sini kita throw agar ditangkap error boundary
+         throw new StrapiError(
+            `Strapi Error: ${response.status} ${response.statusText}`,
+            response.status,
+            errorBody
          );
       }
 
-      // 6. Return JSON
-      const data = await response.json();
+      // G. Parse JSON
+      const json = await response.json();
 
-      // Cek apakah data kosong dari Strapi
-      if (!data.data) {
-         console.warn("⚠️ Fetch berhasil (200 OK) tapi data dari Strapi 'null' atau kosong.");
-      } else {
-         console.log("✅ Data berhasil diterima!");
+      // H. Validasi Data dengan Zod (THE GOLDEN STANDARD) 🛡️
+      // Jika schema diberikan, kita validasi struktur datanya.
+      if (schema) {
+         const validationResult = schema.safeParse(json);
+
+         if (!validationResult.success) {
+            console.error("❌ [Zod] Validasi Data Gagal:", validationResult.error);
+            throw new Error("Data dari API tidak sesuai skema yang diharapkan.");
+         }
+
+         return validationResult.data; // Mengembalikan data yang sudah terjamin tipenya
       }
 
-      return data;
+      // Jika tidak ada schema, return raw json (unsafe, tapi backward compatible)
+      return json as T;
 
    } catch (error) {
-      console.error(`🔥 FetchAPI Gagal Total pada ${path}:`);
-      console.error(error);
+      // Re-throw StrapiError agar bisa ditangani spesifik di UI
+      if (error instanceof StrapiError) {
+         throw error;
+      }
+
+      // Log error fatal
+      console.error(`🔥 [FetchAPI] Critical Error pada ${path}:`, error);
       throw error;
    }
 }

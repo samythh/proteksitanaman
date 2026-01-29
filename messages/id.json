@@ -5,7 +5,7 @@
    },
    "HomePage": {
       "title": "Beranda",
-      "hero_title": "Melindungi Tanaman, Menjaga Masa Depan"
+      "hero_title": "Melindungi Tanaman, Melestarikan Masa Depan"
    },
    "Navigation": {
       "home": "Beranda",
@@ -13,18 +13,198 @@
       "profile": "Profil",
       "academic": "Akademik",
       "facility": "Fasilitas",
-      "contact": "Kontak"
+      "contact": "Kontak",
+      "menu_title": "Menu",
+      "open_page": "Buka Halaman",
+      "close_menu": "Tutup Menu",
+      "switch_id": "Indonesia",
+      "switch_en": "Inggris"
    },
    "News": {
       "read_more": "Baca Selengkapnya",
-      "no_news": "Belum ada berita"
+      "no_news": "Tidak ada berita tersedia"
+   },
+   "NewsDashboard": {
+      "latest_news": "Berita Terkini",
+      "view_all": "Lihat Semua Berita",
+      "read_more": "Baca Selengkapnya",
+      "loading": "Memuat...",
+      "load_more": "Lebih Banyak Berita",
+      "no_data": "Tidak ada berita ditemukan.",
+      "end_list": "Anda sudah mencapai akhir berita.",
+      "sort_newest": "Terbaru",
+      "sort_oldest": "Terlama",
+      "search_placeholder": "Cari..."
+   },
+   "NewsPage": {
+      "meta_title": "Berita & Artikel",
+      "hero_sr_title": "Berita dan Artikel Terkini",
+      "no_news_display": "Belum ada berita untuk ditampilkan saat ini."
    },
    "FacilitiesPage": {
       "title": "Fasilitas Departemen",
       "breadcrumb_home": "Beranda",
       "breadcrumb_profile": "Profil",
       "breadcrumb_facilities": "Fasilitas",
-      "section_title": "Daftar Sarana & Prasarana",
+      "section_title": "Sarana & Prasarana",
       "section_subtitle": "Penunjang Akademik"
+   },
+   "FacilitiesList": {
+      "featured_badge": "Fasilitas Unggulan",
+      "explore_btn": "Lihat Detail",
+      "load_more": "Muat Lebih Banyak",
+      "end_list": "Anda telah mencapai akhir daftar",
+      "no_media": "Tidak ada gambar tersedia",
+      "video_play": "Putar Video",
+      "more_images": "Gambar Lainnya"
+   },
+   "FacilityDetail": {
+      "gallery_title": "Galeri Foto",
+      "other_facilities": "Fasilitas Lainnya",
+      "back_to_list": "Kembali ke Daftar Fasilitas",
+      "video_preview": "Pratinjau Video",
+      "no_image": "Tidak ada gambar tersedia"
+   },
+   "AgendaPage": {
+      "title_ongoing": "Sedang Berjalan",
+      "title_upcoming": "Akan Datang",
+      "title_past": "Selesai",
+      "no_upcoming": "Belum ada agenda yang akan datang.",
+      "no_past": "Belum ada agenda yang selesai.",
+      "view_all": "Lihat Semua",
+      "view_archive": "Lihat Semua Arsip"
+   },
+   "AgendaDetail": {
+      "date": "Tanggal",
+      "time": "Waktu",
+      "location": "Lokasi",
+      "related_events": "Agenda Terkait",
+      "view_all": "Lihat Semua",
+      "view_all_mobile": "Lihat Semua Agenda",
+      "back_to_list": "Kembali ke Agenda",
+      "poster_unavailable": "Poster tidak tersedia",
+      "desc_unavailable": "Tidak ada deskripsi rinci untuk acara ini.",
+      "no_related_events": "Tidak ada agenda lain ditemukan.",
+      "meta_desc_prefix": "Detail acara untuk"
+   },
+   "AgendaArchive": {
+      "title": "Arsip Agenda",
+      "subtitle": "Daftar kegiatan dan acara yang telah berlalu",
+      "back_to_agenda": "Kembali ke Agenda Mendatang",
+      "no_archive": "Tidak ada arsip agenda ditemukan.",
+      "breadcrumb_home": "Beranda",
+      "breadcrumb_agenda": "Agenda",
+      "breadcrumb_archive": "Arsip"
+   },
+   "AgendaHeroSlider": {
+      "status_upcoming": "Akan Datang",
+      "status_finished": "Selesai",
+      "status_ongoing": "Sedang Berjalan",
+      "read_more": "Selengkapnya",
+      "no_image": "Tidak Ada Gambar",
+      "default_tag": "Agenda"
+   },
+   "AgendaCard": {
+      "status_upcoming": "Akan Datang",
+      "status_finished": "Selesai",
+      "status_ongoing": "Sedang Berjalan",
+      "default_tag": "Umum",
+      "poster_alt": "Poster Agenda",
+      "label": "Agenda"
+   },
+   "Error": {
+      "retry": "Coba Lagi",
+      "home": "Kembali ke Beranda",
+      "detail": "Detail Kesalahan",
+      "not_found_title": "Halaman Tidak Ditemukan",
+      "not_found_desc": "Maaf, halaman yang Anda cari tidak ada atau telah dipindahkan.",
+      "server_error_title": "Terjadi Kesalahan",
+      "server_error_desc": "Kami mengalami masalah pada server kami. Silakan coba lagi nanti."
+   },
+   "Footer": {
+      "address_title": "ALAMAT KAMI",
+      "contact_title": "KONTAK & SOSIAL MEDIA",
+      "location_title": "LOKASI KAMI",
+      "no_map": "Peta belum diatur oleh admin.",
+      "no_social": "Media sosial tidak tersedia.",
+      "default_address": "Alamat belum diatur.",
+      "copyright_suffix": "Departemen Proteksi Tanaman. Hak cipta dilindungi undang-undang."
+   },
+   "UI": {
+      "zoom_image": "Perbesar Gambar",
+      "close": "Tutup",
+      "image_modal_label": "Tampilan gambar layar penuh",
+      "scroll_top": "Gulir ke atas",
+      "search_placeholder": "Cari...",
+      "search_label": "Pencarian",
+      "share_label": "Bagikan postingan ini",
+      "copy_link": "Salin Tautan",
+      "copied": "Disalin!",
+      "share_wa": "Bagikan ke WhatsApp",
+      "share_fb": "Bagikan ke Facebook",
+      "share_x": "Bagikan ke X (Twitter)"
+   },
+   "LeadersSection": {
+      "view_photo": "Lihat Foto",
+      "past_period": "Periode Sebelumnya"
+   },
+   "StaffList": {
+      "loading_more": "Memuat lagi...",
+      "all_loaded": "Semua data ({count} Staf) telah ditampilkan"
+   },
+   "StaffCard": {
+      "expertise": "Keahlian",
+      "rank": "Pangkat",
+      "nip": "NIP",
+      "no_photo": "Tidak Ada Foto",
+      "view_profile_aria": "Lihat profil {name}",
+      "banner_alt": "Latar Belakang Kartu",
+      "staff_alt": "Staf"
+   },
+   "StaffDetail": {
+      "role_academic": "Staf Akademik",
+      "role_admin": "Staf Administrasi",
+      "education": "Pendidikan",
+      "back_to_list": "Kembali ke Daftar Staf",
+      "email_title": "Email",
+      "profile_section_title": "Profil",
+      "breadcrumb_profile": "Profil",
+      "breadcrumb_staff": "Staf",
+      "breadcrumb_detail": "Detail",
+      "nip": "NIP",
+      "default_role_academic": "Dosen",
+      "default_role_admin": "Tenaga Kependidikan",
+      "staff_not_found_title": "Staf Tidak Ditemukan",
+      "meta_title_suffix": "Profil",
+      "meta_desc_prefix": "Profil lengkap"
+   },
+   "ArticleCard": {
+      "default_category": "Berita",
+      "no_image": "Tidak Ada Gambar",
+      "read_more": "Baca Artikel"
+   },
+   "SearchPage": {
+      "title": "Hasil Pencarian",
+      "loading_initial": "Memuat pencarian...",
+      "showing_results_for": "Menampilkan hasil untuk kata kunci",
+      "filter_label": "Filter:",
+      "filter_all": "Semua",
+      "filter_article": "Berita & Artikel",
+      "filter_event": "Agenda",
+      "filter_staff": "Dosen & Staff",
+      "filter_facility": "Fasilitas",
+      "filter_page": "Halaman Lain",
+      "sort_relevance": "Paling Relevan",
+      "sort_newest": "Terbaru",
+      "sort_oldest": "Terlama",
+      "meta_total": "Total Data:",
+      "meta_page": "Halaman",
+      "loading_results": "Sedang mencari data...",
+      "no_title": "Tanpa Judul",
+      "empty_title": "Tidak Ditemukan",
+      "empty_desc": "Maaf, kami tidak dapat menemukan hasil untuk \"{query}\" pada kategori ini. Coba kata kunci lain atau ubah filter.",
+      "reset_filter": "Reset Filter",
+      "prev_page": "Sebelumnya",
+      "next_page": "Selanjutnya"
    }
 }

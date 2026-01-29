@@ -1,26 +1,28 @@
 // File: src/components/sections/QuickAccess.tsx
 "use client";
 
+import React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { getStrapiMedia } from "@/lib/strapi/utils";
+import { ExternalLink } from "lucide-react"; 
 
-// Konfigurasi Warna Tema
-const COLOR_THEMES: Record<string, { title: string; bg: string }> = {
-   blue: { title: "group-hover:text-blue-700", bg: "bg-blue-100" },
-   green: { title: "group-hover:text-green-700", bg: "bg-green-100" },
-   orange: { title: "group-hover:text-orange-700", bg: "bg-orange-100" },
-   purple: { title: "group-hover:text-purple-700", bg: "bg-purple-100" },
-   teal: { title: "group-hover:text-teal-700", bg: "bg-teal-100" },
-   default: { title: "group-hover:text-gray-700", bg: "bg-gray-100" },
+// --- KONFIGURASI TEMA ---
+const COLOR_THEMES: Record<string, { title: string; bg: string; border: string }> = {
+   blue: { title: "group-hover:text-blue-700", bg: "bg-blue-50 group-hover:bg-blue-100", border: "group-hover:border-blue-200" },
+   green: { title: "group-hover:text-green-700", bg: "bg-green-50 group-hover:bg-green-100", border: "group-hover:border-green-200" },
+   orange: { title: "group-hover:text-orange-700", bg: "bg-orange-50 group-hover:bg-orange-100", border: "group-hover:border-orange-200" },
+   purple: { title: "group-hover:text-purple-700", bg: "bg-purple-50 group-hover:bg-purple-100", border: "group-hover:border-purple-200" },
+   teal: { title: "group-hover:text-teal-700", bg: "bg-teal-50 group-hover:bg-teal-100", border: "group-hover:border-teal-200" },
+   default: { title: "group-hover:text-gray-900", bg: "bg-gray-50 group-hover:bg-gray-100", border: "group-hover:border-gray-200" },
 };
 
-// --- DEFINISI TIPE DATA (Interface) ---
-interface IconData {
+// --- TYPE DEFINITIONS ---
+interface StrapiImage {
    url?: string;
    data?: {
-      attributes: {
-         url: string;
-      };
+      attributes: { url: string };
+      url?: string;
    };
 }
 
@@ -29,7 +31,7 @@ interface QuickLinkItem {
    title: string;
    url: string;
    theme: string;
-   icon?: IconData;
+   icon?: StrapiImage;
 }
 
 interface QuickAccessData {
@@ -42,89 +44,89 @@ interface QuickAccessProps {
 }
 
 export default function QuickAccess({ data }: QuickAccessProps) {
-   const sectionTitle = data.sectionTitle;
-   const links = data.links || [];
+   const { sectionTitle, links = [] } = data;
 
    if (!links || links.length === 0) return null;
 
-   const STRAPI_URL = process.env.NEXT_PUBLIC_STRAPI_API_URL || "http://localhost:1337";
+   // Helper untuk URL Gambar
+   const getIconUrl = (img?: StrapiImage) => {
+      const raw = img?.url || img?.data?.attributes?.url;
+      return getStrapiMedia(raw);
+   };
 
    return (
       <section className="bg-[#749F74] py-16 -mt-2">
          <div className="container mx-auto px-4">
 
             {/* Container Putih */}
-            <div className="bg-white max-w-6xl mx-auto rounded-2xl shadow-2xl p-6 md:p-10 relative z-10">
+            <div className="bg-white max-w-6xl mx-auto rounded-[2rem] shadow-2xl p-8 md:p-12 relative z-10 border border-white/20">
 
-               <div className="text-center mb-8">
-                  <h2 className="text-xl md:text-3xl font-bold text-gray-800 relative inline-block">
+               {/* Header Section */}
+               <div className="text-center mb-10">
+                  <h2 className="text-2xl md:text-3xl font-bold text-gray-800 relative inline-block">
                      {sectionTitle || "Akses Cepat"}
-                     <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-16 h-1.5 bg-[#749F74] rounded-full"></span>
+                     <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-20 h-1.5 bg-[#749F74] rounded-full"></span>
                   </h2>
                </div>
 
-               {/* PERUBAHAN 1: GAP 
-             gap-3 (mobile) dan md:gap-4 (desktop) -> Lebih Rapat 
-          */}
-               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4 justify-items-center">
-                  {links.map((item: QuickLinkItem) => {
-                     const themeColors = COLOR_THEMES[item.theme] || COLOR_THEMES['default'];
-
-                     // Logic URL Gambar
-                     let rawUrl = item.icon?.url;
-                     if (!rawUrl) rawUrl = item.icon?.data?.attributes?.url;
-
-                     let iconUrl = "";
-                     if (rawUrl) {
-                        iconUrl = rawUrl.startsWith("http") ? rawUrl : `${STRAPI_URL}${rawUrl}`;
-                     }
+               {/* Grid Links */}
+               {/* Layout Responsif: 2 kolom (HP) -> 3 kolom (Tablet) -> 5 kolom (PC) */}
+               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6 justify-items-center">
+                  {links.map((item) => {
+                     const theme = COLOR_THEMES[item.theme] || COLOR_THEMES['default'];
+                     const iconUrl = getIconUrl(item.icon);
+                     const isExternal = item.url?.startsWith("http");
 
                      return (
                         <Link
                            key={item.id}
                            href={item.url || "#"}
-                           className="group flex flex-col items-center gap-3 w-full"
-                           target={item.url?.startsWith("http") ? "_blank" : "_self"}
+                           target={isExternal ? "_blank" : "_self"}
+                           rel={isExternal ? "noopener noreferrer" : undefined}
+                           className="group flex flex-col items-center gap-4 w-full p-2 rounded-xl transition-all duration-300"
                         >
-                           {/* PERUBAHAN 2: UKURAN CARD (BOX)
-                     w-24 h-24 (mobile) -> Lebih Besar
-                     md:w-32 md:h-32 (desktop) -> Jauh Lebih Besar & Jelas
-                  */}
-                           <div className={`
-                      flex items-center justify-center 
+                           {/* ICON CONTAINER (BOX) */}
+                           <div
+                              className={`
+                      relative flex items-center justify-center 
                       w-24 h-24 md:w-32 md:h-32 
-                      rounded-3xl shadow-sm border border-gray-50
-                      transition-transform duration-300 group-hover:scale-105 group-hover:shadow-md
-                      ${themeColors.bg} 
+                      rounded-3xl shadow-sm border border-gray-100
+                      transition-all duration-300 
+                      group-hover:scale-105 group-hover:shadow-lg group-hover:-translate-y-1
+                      ${theme.bg} ${theme.border}
                     `}
                            >
-                              {/* PERUBAHAN 3: UKURAN IKON
-                       Ikon di dalam juga dibesarkan agar seimbang
-                    */}
                               <div className="relative w-10 h-10 md:w-14 md:h-14">
                                  {iconUrl ? (
                                     <Image
                                        src={iconUrl}
                                        alt={item.title}
                                        fill
-                                       className="object-contain drop-shadow-sm"
+                                       sizes="64px" 
+                                       className="object-contain drop-shadow-sm transition-transform duration-300 group-hover:scale-110"
                                     />
                                  ) : (
-                                    <div className="w-full h-full bg-gray-300 rounded-full" />
+                                    <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                       <ExternalLink size={32} />
+                                    </div>
                                  )}
                               </div>
                            </div>
 
-                           {/* PERUBAHAN 4: UKURAN TEKS 
-                     text-base (mobile) & md:text-lg (desktop) -> Lebih Terbaca
-                  */}
-                           <span className={`text-base md:text-lg font-bold text-gray-700 text-center transition-colors leading-tight px-2 ${themeColors.title}`}>
+                           {/* LABEL TEXT */}
+                           <span
+                              className={`
+                      text-sm md:text-base font-bold text-gray-600 text-center leading-tight px-1 transition-colors duration-300
+                      ${theme.title}
+                    `}
+                           >
                               {item.title}
                            </span>
                         </Link>
                      );
                   })}
                </div>
+
             </div>
          </div>
       </section>

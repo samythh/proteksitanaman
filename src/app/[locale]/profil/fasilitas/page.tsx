@@ -1,34 +1,57 @@
-// File: src/app/[locale]/profil/fasilitas/page.tsx
-
 import { fetchAPI } from "@/lib/strapi/fetcher";
 import FacilitiesListSection from "@/components/sections/FacilitiesListSection";
+import qs from "qs";
+import { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 
 // --- TYPE DEFINITIONS ---
-interface StrapiResponse<T> {
-   data: T;
-   meta?: {
-      pagination: {
-         page: number;
-         pageCount: number;
-         pageSize: number;
-         total: number;
-      };
-   };
+interface FacilityV5 {
+   id: number;
+   name: string;
+   slug: string;
+   description: string;
+   youtube_id?: string;
+   images?: Array<{
+      id: number;
+      url: string;
+      alternativeText?: string;
+   }>;
 }
 
-// ✅ Interface Baru untuk Config Halaman
-interface FacilitiesPageConfig {
+interface PageConfigV5 {
    section_label?: string;
    title_main?: string;
    title_highlight?: string;
    description?: string;
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+interface StrapiResponse<T> {
+   data: T;
+   meta?: {
+      pagination?: {
+         total: number;
+      }
+   }
+}
+
+export async function generateMetadata({
+   params
+}: {
+   params: Promise<{ locale: string }>
+}): Promise<Metadata> {
    const { locale } = await params;
-   return {
-      title: locale === "en" ? "Facilities - Department" : "Fasilitas - Departemen",
-   };
+   const t = await getTranslations({ locale, namespace: "FacilitiesPage" }); 
+
+   try {
+      const res = await fetchAPI("/facilities-page", { locale }) as StrapiResponse<PageConfigV5>;
+      const data = res.data;
+      return {
+         title: data?.title_main || t("title"), // Fallback ke JSON
+         description: data?.description || t("section_subtitle"), // Fallback ke JSON
+      };
+   } catch {
+      return { title: t("title") };
+   }
 }
 
 export default async function FasilitasPage({
@@ -38,49 +61,37 @@ export default async function FasilitasPage({
 }) {
    const { locale } = await params;
 
-   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-   let facilitiesList: any[] = [];
-   let pageConfig: FacilitiesPageConfig | null = null;
+   let facilities: FacilityV5[] = [];
+   let pageConfig: PageConfigV5 | null = null;
 
    try {
-      // ✅ Fetching Parallel: List Fasilitas & Config Halaman
-      const [facilitiesRes, configRes] = await Promise.all([
-         // 1. Fetch List Fasilitas
-         fetchAPI("/facilities", {
-            locale: locale,
-            sort: ["name:asc"],
-            populate: {
-               images: { fields: ["url", "alternativeText", "width", "height"] },
-            },
-            pagination: { limit: 100 },
-         }),
+      // A. Query Params
+      const queryFacilities = qs.stringify({
+         locale: locale,
+         sort: ["name:asc"], // Mengurutkan berdasarkan Nama (A-Z)
+         populate: ["images"],
+         // Ambil 100 data sekaligus untuk memastikan semua muncul
+         pagination: { page: 1, pageSize: 100 },
+      }, { encodeValuesOnly: true });
 
-         // 2. Fetch Config Halaman (Judul, Deskripsi, dll)
-         fetchAPI("/facilities-page", {
-            locale: locale,
-            // Tidak butuh populate karena cuma text field biasa
-         }),
+      // B. Fetching
+      const [facilitiesRes, configRes] = await Promise.all([
+         fetchAPI(`/facilities?${queryFacilities}`) as Promise<StrapiResponse<FacilityV5[]>>,
+         fetchAPI(`/facilities-page?locale=${locale}`) as Promise<StrapiResponse<PageConfigV5>>,
       ]);
 
-      // Type Casting
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const facilitiesData = facilitiesRes as StrapiResponse<any[]>;
-      const configData = configRes as StrapiResponse<{ attributes: FacilitiesPageConfig }>;
-
-      facilitiesList = facilitiesData?.data || [];
-      // Handle struktur Strapi (attributes atau flat)
-      pageConfig = configData?.data?.attributes || configData?.data || null;
+      facilities = facilitiesRes.data || [];
+      pageConfig = configRes.data || null;
 
    } catch (error) {
-      console.error("[FasilitasPage Error] Gagal mengambil data:", error);
+      console.error("[FasilitasPage Error]:", error);
    }
 
    return (
       <div className="bg-white min-h-screen pt-16 md:pt-20 pb-20">
          <div className="container mx-auto px-0 relative z-10">
-            {/* ✅ Kirim data pageConfig ke Client Component */}
             <FacilitiesListSection
-               data={{ facilities: facilitiesList }}
+               data={{ facilities }}
                config={pageConfig}
                locale={locale}
             />

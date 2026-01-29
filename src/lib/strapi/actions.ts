@@ -1,37 +1,56 @@
 // File: src/lib/strapi/actions.ts
 "use server";
-// ^ Wajib ada "use server" di baris paling atas agar bisa dipanggil dari Client Component
 
-import { fetchAPI } from "@/lib/strapi/fetcher";
+import qs from "qs";
+import { getStrapiURL } from "./utils";
 
-// Fungsi untuk mengambil data staff halaman selanjutnya
-export async function getMoreStaff(
-   category: string,
-   locale: string,
-   page: number
-) {
+export async function getMoreStaff(category: string, locale: string, page: number) {
+   // Debug 1: Cek URL dasar
+   const baseUrl = getStrapiURL();
+   const url = new URL("/api/staff-members", baseUrl);
+
+   const query = qs.stringify({
+      filters: { category: { $eq: category } },
+      populate: {
+         photo: { populate: "*" },
+         Role_Details: { populate: "*" },
+         Education_History: { populate: "*" },
+      },
+      locale: locale,
+      sort: ["name:asc"],
+      pagination: {
+         page: page,
+         pageSize: 6,
+      },
+   });
+
+   url.search = query;
+
+   console.log(`[SERVER ACTION] Fetching Page ${page}...`);
+   console.log(`[SERVER ACTION] URL: ${url.href}`);
+
    try {
-      const response = await fetchAPI("/staff-members", {
-         filters: { category: { $eq: category } },
-         populate: {
-            photo: { fields: ["url"] },
-            Role_Details: { populate: "*" },
-            Education_History: { populate: "*" }
-         },
-         locale: locale,
-         sort: ["name:asc"],
-         pagination: {
-            page: page,
-            pageSize: 6, // Jumlah item per load
-         },
+      const res = await fetch(url.href, {
+         method: "GET",
+         headers: { "Content-Type": "application/json" },
+         cache: "no-store",
       });
 
-      return {
-         data: response.data || [],
-         meta: response.meta,
-      };
+      if (!res.ok) {
+         console.error(`[SERVER ACTION] Error Status: ${res.status}`);
+         throw new Error(`Failed to fetch: ${res.status}`);
+      }
+
+      const json = await res.json();
+
+      // Debug 2: Cek apakah data benar-benar ada
+      const itemCount = json.data?.length || 0;
+      console.log(`[SERVER ACTION] Success! Found ${itemCount} items on Page ${page}`);
+
+      return json;
+
    } catch (error) {
-      console.error("Error fetching more staff:", error);
+      console.error("[SERVER ACTION] CRITICAL ERROR:", error);
       return { data: [], meta: null };
    }
 }

@@ -4,15 +4,29 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { getStrapiMedia } from "@/lib/strapi/utils";
-import { Staff } from "@/types/staff";
+import { useTranslations } from "next-intl";
 
 // Import Icon Default
 import { SiGooglescholar } from "react-icons/si";
 import { FaBook, FaGlobe } from "react-icons/fa";
 
-// 1. UPDATE INTERFACE
+// --- TIPE DATA ---
+interface StrapiDataInput {
+  id?: number;
+  attributes?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+interface PhotoSource {
+  url?: string;
+  attributes?: { url?: string };
+  data?: {
+    attributes?: { url?: string };
+  } | null;
+}
+
 interface StaffCardProps {
-  data: Staff;
+  data: StrapiDataInput;
   globalBannerUrl?: string;
   icons?: {
     sinta?: string;
@@ -22,8 +36,7 @@ interface StaffCardProps {
   locale?: string;
 }
 
-// --- Definisi Tipe Data Internal ---
-interface AcademicDataComponent {
+interface AcademicData {
   __component: "staff-data.academic-data";
   expertise: string;
   sinta_url?: string;
@@ -31,23 +44,11 @@ interface AcademicDataComponent {
   google_scholar_url?: string;
 }
 
-interface AdminDataComponent {
+interface AdminData {
   __component: "staff-data.admin-data";
   position: string;
   rank: string;
 }
-
-type RoleDetailItem = AcademicDataComponent | AdminDataComponent;
-
-interface StaffAttributes {
-  name: string;
-  nip: string;
-  slug: string;
-  category: "akademik" | "administrasi";
-  photo?: { data?: { attributes?: { url: string } } | null; url?: string };
-  Role_Details: RoleDetailItem[];
-}
-// ------------------------------------
 
 export default function StaffCard({
   data,
@@ -55,64 +56,71 @@ export default function StaffCard({
   icons,
   locale = "id",
 }: StaffCardProps) {
+  // ✅ Panggil Hook Translation
+  const t = useTranslations("StaffCard");
+
   if (!data) return null;
 
-  const rawData = data as unknown as {
-    attributes?: StaffAttributes;
-  } & StaffAttributes;
-  const attributes = rawData.attributes || rawData;
+  // --- 1. NORMALISASI DATA ---
+  const attributes = (data.attributes || data) as StrapiDataInput;
 
-  const { name, nip, slug, category, photo, Role_Details } = attributes;
+  const name = attributes.name as string;
+  const nip = attributes.nip as string;
+  const slug = attributes.slug as string;
+  const category = attributes.category as string;
+  const photo = attributes.photo;
+  const Role_Details = attributes.Role_Details;
 
-  // URL Detail Page
+  if (!name) return null;
+
   const detailHref = `/${locale}/profil/staf/${category}/${slug}`;
 
-  const academicData = Role_Details?.find(
-    (item) => item.__component === "staff-data.academic-data"
-  ) as AcademicDataComponent | undefined;
+  // --- 2. LOGIC ROLE ---
+  const roleList = (Role_Details || []) as (AcademicData | AdminData)[];
 
-  const adminData = Role_Details?.find(
-    (item) => item.__component === "staff-data.admin-data"
-  ) as AdminDataComponent | undefined;
+  const academicData = roleList.find(
+    (item): item is AcademicData => item.__component === "staff-data.academic-data"
+  );
 
-  const photoData = photo?.data || photo;
-  const rawPhotoUrl =
-    (photoData as { attributes?: { url: string } })?.attributes?.url ||
-    (photoData as { url?: string })?.url;
+  const adminData = roleList.find(
+    (item): item is AdminData => item.__component === "staff-data.admin-data"
+  );
 
-  const imageUrl = getStrapiMedia(rawPhotoUrl || null);
+  // --- 3. LOGIC GAMBAR ---
+  const extractPhotoUrl = (obj: unknown): string | null => {
+    if (!obj || typeof obj !== "object") return null;
+    const img = obj as PhotoSource;
+    return img.url || img.data?.attributes?.url || img.attributes?.url || null;
+  };
+
+  const rawPhotoUrl = extractPhotoUrl(photo);
+  const imageUrl = getStrapiMedia(rawPhotoUrl);
   const bannerSrc = getStrapiMedia(globalBannerUrl || null);
 
   const sintaIconSrc = getStrapiMedia(icons?.sinta || null);
   const scopusIconSrc = getStrapiMedia(icons?.scopus || null);
   const scholarIconSrc = getStrapiMedia(icons?.scholar || null);
 
-  const expertiseLabel = locale === "en" ? "Expertise:" : "Keahlian:";
-  const rankLabel = locale === "en" ? "Rank:" : "Pangkat:";
-
   return (
-    // PERBAIKAN 1: Gunakan div sebagai wrapper utama (bukan Link)
-    // Pindahkan semua class styling card ke sini
     <div className="group relative bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col h-full">
 
-      {/* PERBAIKAN 2: Link Utama (Overlay) */}
-      {/* Link ini menutupi seluruh card (absolute inset-0) dan berada di layer paling bawah (z-0) */}
+      {/* LINK OVERLAY */}
       <Link
         href={detailHref}
         className="absolute inset-0 z-0"
-        aria-label={`Lihat profil ${name}`}
+        aria-label={t("view_profile_aria", { name })}
       />
 
-      {/* Banner Area */}
-      {/* Tambahkan pointer-events-none agar klik tembus ke Link Overlay di belakangnya */}
+      {/* BANNER */}
       <div className="h-20 w-full relative bg-green-50 shrink-0 pointer-events-none z-10">
         {bannerSrc ? (
           <>
             <Image
               src={bannerSrc}
-              alt="Card Background"
+              alt={t("banner_alt")}
               fill
               className="object-cover"
+              sizes="(max-width: 768px) 100vw, 300px"
             />
             <div className="absolute inset-0 bg-black/10"></div>
           </>
@@ -121,27 +129,27 @@ export default function StaffCard({
         )}
       </div>
 
-      {/* Konten */}
-      {/* pointer-events-none digunakan pada teks agar tidak memblokir link utama */}
+      {/* KONTEN */}
       <div className="px-6 pb-6 relative flex flex-col flex-grow pointer-events-none z-10">
 
-        {/* Foto Profil */}
+        {/* FOTO PROFIL */}
         <div className="-mt-16 mb-3 relative w-32 h-32 rounded-full border-4 border-white shadow-md overflow-hidden bg-gray-200 shrink-0 mx-auto md:mx-0">
           {imageUrl ? (
             <Image
               src={imageUrl}
-              alt={name || "Staff"}
+              alt={name || t("staff_alt")}
               fill
               className="object-cover"
+              sizes="128px"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-500 text-xs text-center">
-              No Photo
+              {t("no_photo")}
             </div>
           )}
         </div>
 
-        {/* Info Teks */}
+        {/* INFO TEKS */}
         <div className="space-y-1 mb-4 flex-grow">
           <h3 className="text-lg font-bold text-gray-900 leading-tight group-hover:text-green-700 transition-colors">
             {name}
@@ -153,11 +161,11 @@ export default function StaffCard({
                 {adminData?.position || "-"}
               </p>
               <p className="text-xs text-gray-500 font-medium mt-2">
-                NIP: {nip || "-"}
+                {t("nip")}: {nip || "-"}
               </p>
               <p className="text-sm text-gray-700 mt-1">
                 <span className="font-medium text-gray-500 mr-1">
-                  {rankLabel}
+                  {t("rank")}:
                 </span>
                 {adminData?.rank || "-"}
               </p>
@@ -165,11 +173,11 @@ export default function StaffCard({
           ) : (
             <>
               <p className="text-xs text-gray-500 font-medium mt-1">
-                NIP: {nip || "-"}
+                {t("nip")}: {nip || "-"}
               </p>
               <p className="text-sm text-gray-700 mt-3">
                 <span className="font-semibold text-green-700 text-xs uppercase tracking-wide mr-1">
-                  {expertiseLabel}
+                  {t("expertise")}:
                 </span>
                 {academicData?.expertise || "-"}
               </p>
@@ -177,13 +185,9 @@ export default function StaffCard({
           )}
         </div>
 
-        {/* Icons Footer */}
-        {/* PERBAIKAN 3: Area Icon */}
-        {/* pointer-events-auto: Agar tombol bisa diklik */}
-        {/* relative z-20: Agar posisinya DI ATAS Link Overlay utama */}
+        {/* ICONS */}
         {category === "akademik" && academicData && (
           <div className="flex items-center gap-4 pt-4 border-t border-gray-100 mt-auto relative z-20 pointer-events-auto">
-
             {academicData.sinta_url && (
               <Link
                 href={academicData.sinta_url}
@@ -192,13 +196,7 @@ export default function StaffCard({
                 title="Sinta"
               >
                 {sintaIconSrc ? (
-                  <Image
-                    src={sintaIconSrc}
-                    alt="Sinta Logo"
-                    width={40}
-                    height={40}
-                    className="h-10 w-auto object-contain"
-                  />
+                  <Image src={sintaIconSrc} alt="Sinta" width={40} height={40} className="h-10 w-auto object-contain" />
                 ) : (
                   <FaBook className="w-8 h-8 text-gray-400 hover:text-blue-600" />
                 )}
@@ -213,13 +211,7 @@ export default function StaffCard({
                 title="Scopus"
               >
                 {scopusIconSrc ? (
-                  <Image
-                    src={scopusIconSrc}
-                    alt="Scopus Logo"
-                    width={40}
-                    height={40}
-                    className="h-10 w-auto object-contain"
-                  />
+                  <Image src={scopusIconSrc} alt="Scopus" width={40} height={40} className="h-10 w-auto object-contain" />
                 ) : (
                   <FaGlobe className="w-8 h-8 text-gray-400 hover:text-orange-500" />
                 )}
@@ -234,13 +226,7 @@ export default function StaffCard({
                 title="Google Scholar"
               >
                 {scholarIconSrc ? (
-                  <Image
-                    src={scholarIconSrc}
-                    alt="Scholar Logo"
-                    width={40}
-                    height={40}
-                    className="h-10 w-auto object-contain"
-                  />
+                  <Image src={scholarIconSrc} alt="Scholar" width={40} height={40} className="h-10 w-auto object-contain" />
                 ) : (
                   <SiGooglescholar className="w-8 h-8 text-gray-400 hover:text-blue-500" />
                 )}

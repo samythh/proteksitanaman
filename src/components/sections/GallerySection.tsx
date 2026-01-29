@@ -1,18 +1,24 @@
-// File: src/components/sections/GallerySection.tsx
-
 "use client";
 
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import { getStrapiMedia } from "@/lib/strapi/utils";
+import { ZoomIn, X } from "lucide-react";
 
 // --- TYPE DEFINITIONS ---
+interface StrapiImage {
+   url: string;
+   data?: {
+      attributes?: { url: string };
+      url?: string;
+   };
+}
+
 interface GalleryItem {
    id: number;
    title: string;
-   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-   image: any;
+   image: StrapiImage;
 }
 
 interface GallerySectionData {
@@ -29,11 +35,16 @@ export default function GallerySection({ data }: GallerySectionProps) {
    const title = data.title;
    const items = data.items || [];
 
-   // State untuk Popup (Lightbox)
+   // State for Lightbox
    const [selectedImage, setSelectedImage] = useState<string | null>(null);
    const [selectedCaption, setSelectedCaption] = useState<string>("");
+   const [isClient, setIsClient] = useState(false);
 
-   // HAPUS: State mounted tidak diperlukan lagi karena Portal hanya aktif saat ada klik.
+   // Set isClient to true on mount to safely use createPortal
+   useEffect(() => {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsClient(true);
+   }, []);
 
    // Handle Scroll Lock
    useEffect(() => {
@@ -48,8 +59,7 @@ export default function GallerySection({ data }: GallerySectionProps) {
    }, [selectedImage]);
 
    // Helper URL
-   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-   const getRawUrl = (img: any): string | null => {
+   const getRawUrl = (img: StrapiImage | null): string | null => {
       if (!img) return null;
       if (img.url) return img.url;
       if (img.data?.attributes?.url) return img.data.attributes.url;
@@ -71,22 +81,24 @@ export default function GallerySection({ data }: GallerySectionProps) {
 
    return (
       <>
-         <section className="container mx-auto px-6 md:px-16 lg:px-24 py-12 md:py-20">
+         <section className="container mx-auto px-4 md:px-8 lg:px-12 py-16 md:py-24">
 
             {/* 1. HEADER */}
-            <div className="text-left max-w-3xl mb-10 md:mb-12">
+            <div className="text-left max-w-4xl mb-12">
                {title && (
-                  <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 border-l-4 border-green-600 pl-4">
+                  <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6 border-l-4 border-green-600 pl-4">
                      {title}
                   </h2>
                )}
                {data.subtitle && (
-                  <p className="text-gray-600 text-lg leading-relaxed">{data.subtitle}</p>
+                  <p className="text-gray-600 text-lg leading-relaxed pl-5">
+                     {data.subtitle}
+                  </p>
                )}
             </div>
 
             {/* 2. GRID GALLERY */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
                {items.map((item, index) => {
                   const rawUrl = getRawUrl(item.image);
                   const imgUrl = getStrapiMedia(rawUrl);
@@ -96,32 +108,30 @@ export default function GallerySection({ data }: GallerySectionProps) {
                   return (
                      <div
                         key={item.id || index}
-                        className="group relative cursor-pointer overflow-hidden rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 aspect-square"
+                        className="group relative cursor-pointer overflow-hidden rounded-xl shadow-sm hover:shadow-xl transition-all duration-500 aspect-square bg-gray-100"
                         onClick={() => openLightbox(imgUrl, item.title)}
                      >
                         <Image
                            src={imgUrl}
                            alt={item.title || "Gallery Image"}
                            fill
+                           sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
                            className="object-cover transition-transform duration-700 group-hover:scale-110"
                         />
 
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300 flex items-end">
-                           <div className="p-4 w-full translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                              <p className="text-white font-medium text-sm md:text-base text-center bg-black/50 backdrop-blur-sm py-2 px-3 rounded-lg">
-                                 {item.title}
-                              </p>
-                           </div>
+                        {/* Overlay Gradient */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+
+                           {/* Caption on Hover */}
+                           <p className="text-white font-medium text-sm md:text-base transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                              {item.title}
+                           </p>
                         </div>
 
+                        {/* Zoom Icon Center */}
                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-                           <div className="bg-white/20 backdrop-blur-md p-3 rounded-full text-white">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                 <circle cx="11" cy="11" r="8"></circle>
-                                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                                 <line x1="11" y1="8" x2="11" y2="14"></line>
-                                 <line x1="8" y1="11" x2="14" y2="11"></line>
-                              </svg>
+                           <div className="bg-white/30 backdrop-blur-md p-3 rounded-full text-white shadow-lg border border-white/20">
+                              <ZoomIn size={24} />
                            </div>
                         </div>
                      </div>
@@ -130,46 +140,43 @@ export default function GallerySection({ data }: GallerySectionProps) {
             </div>
          </section>
 
-         {/* 3. LIGHTBOX POPUP (MENGGUNAKAN PORTAL) */}
-         {/* Logic: Kita hanya merender Portal jika `selectedImage` ada isinya (Truth).
-          Karena `selectedImage` awalnya null, kode ini TIDAK dijalankan saat Server Side Rendering (SSR).
-          Kode ini hanya jalan setelah user melakukan KLIK (Client Side interaction), 
-          sehingga `document.body` dijamin sudah ada.
-      */}
-         {selectedImage && typeof document !== "undefined" && createPortal(
+         {/* 3. LIGHTBOX POPUP */}
+         {selectedImage && isClient && createPortal(
             <div
-               className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/95 backdrop-blur-sm p-4 animate-in fade-in duration-300"
+               className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 backdrop-blur-md p-4 animate-in fade-in duration-300"
                onClick={closeLightbox}
             >
                {/* Close Button */}
                <button
                   onClick={closeLightbox}
-                  className="absolute top-6 right-6 text-white/70 hover:text-white transition-colors z-50 p-2 bg-white/10 rounded-full cursor-pointer"
+                  className="absolute top-6 right-6 text-white/70 hover:text-white transition-colors z-50 p-2 bg-white/10 hover:bg-white/20 rounded-full cursor-pointer"
+                  aria-label="Close Gallery"
                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                     <line x1="18" y1="6" x2="6" y2="18"></line>
-                     <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
+                  <X size={32} />
                </button>
 
                {/* Image Container */}
                <div
-                  className="relative w-full max-w-5xl h-[80vh] flex flex-col items-center justify-center pointer-events-none"
+                  className="relative w-full max-w-6xl h-[85vh] flex flex-col items-center justify-center"
                   onClick={(e) => e.stopPropagation()}
                >
-                  <div className="relative w-full h-full pointer-events-auto">
+                  <div className="relative w-full h-full">
                      <Image
                         src={selectedImage}
-                        alt="Popup Image"
+                        alt={selectedCaption || "Gallery Preview"}
                         fill
                         className="object-contain"
+                        quality={100}
+                        priority
                      />
                   </div>
 
                   {selectedCaption && (
-                     <p className="mt-4 text-white text-lg font-medium text-center bg-black/50 px-6 py-2 rounded-full pointer-events-auto">
-                        {selectedCaption}
-                     </p>
+                     <div className="mt-4 text-white text-center">
+                        <p className="text-lg font-medium bg-black/50 px-6 py-2 rounded-full inline-block backdrop-blur-sm border border-white/10">
+                           {selectedCaption}
+                        </p>
+                     </div>
                   )}
                </div>
             </div>,

@@ -1,20 +1,37 @@
-// File: next.config.mjs
 import createNextIntlPlugin from "next-intl/plugin";
 
 /** @type {import('next').NextConfig} */
 
-// 1. Setup Plugin Bahasa (JANGAN DIHAPUS)
+// 1. Inisialisasi Plugin i18n
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
-// 2. Setup Konfigurasi Utama (Gambar)
+// 2. Konfigurasi Utama Next.js
 const nextConfig = {
+  // --- A. SECURITY & PERFORMANCE ---
+  poweredByHeader: false,
+  compress: true,
+  reactStrictMode: true,
+
+  // --- B. LOGGING ---
+  logging: {
+    fetches: {
+      fullUrl: true,
+    },
+  },
+
+  // --- C. IMAGE OPTIMIZATION ---
   images: {
     formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 60,
+
     remotePatterns: [
+      // 1. Placeholder (Development)
       {
         protocol: "https",
         hostname: "placehold.co",
       },
+
+      // 2. Localhost Strapi (Untuk development lokal)
       {
         protocol: "http",
         hostname: "localhost",
@@ -27,29 +44,29 @@ const nextConfig = {
         port: "1337",
         pathname: "/uploads/**",
       },
-      // ✅ TAMBAHAN BARU: IP Address Server Strapi Anda
-      {
-        protocol: "http",
-        hostname: "202.10.34.176",
-        port: "1337",
-        pathname: "/uploads/**",
-      },
-      // Domain Backend
+
+      // 3. ✅ SERVER UTAMA (Strapi Production)
       {
         protocol: "https",
         hostname: "api.backendn8n.cloud",
         port: "",
         pathname: "/uploads/**",
       },
-      // ✅ TAMBAHAN BARU: Izin untuk Thumbnail YouTube
+
+      // 4. External Providers (YouTube Thumbnails)
       {
         protocol: "https",
         hostname: "img.youtube.com",
       },
+
+      // 5. 🏳️‍🌈 Flag CDN (Untuk Bendera Navbar)
+      {
+        protocol: "https",
+        hostname: "flagcdn.com",
+      },
     ],
-    minimumCacheTTL: 604800,
   },
 };
 
-// 3. Export Gabungan (PENTING: Harus dibungkus withNextIntl)
+// 3. Export dengan Plugin i18n
 export default withNextIntl(nextConfig);

@@ -4,7 +4,7 @@
 
 import { getStrapiMedia } from "@/lib/strapi/utils";
 
-// --- EXISTING COMPONENTS IMPORTS ---
+// --- 1. EXISTING / LEGACY COMPONENTS ---
 import HeroSlider from "@/components/sections/HeroSlider";
 import QuickAccess from "@/components/sections/QuickAccess";
 import VideoProfile, { VideoSlide } from "@/components/sections/VideoProfile";
@@ -16,10 +16,12 @@ import PartnershipSection, { PartnerItemData } from "@/components/sections/Partn
 import VisitorStats from "@/components/sections/VisitorStats";
 import OtherLinkSection, { LinkItemData } from "@/components/sections/OtherLinkSection";
 import FAQSection from "@/components/sections/FAQSection";
-import PageHeader from "@/components/ui/PageHeader";
-import RichText from "@/components/sections/RichText";
 
-// --- NEW COMPONENTS IMPORTS ---
+// --- 2. UI & UTILS ---
+import PageHeader from "@/components/ui/PageHeader";
+import RichText from "@/components/sections/RichText"; // Pastikan path import benar
+
+// --- 3. NEW COMPONENTS ---
 import AgendaPreview from "@/components/sections/AgendaPreview";
 import VisiMisiSection from "@/components/sections/VisiMisiSection";
 import LeadersSection from "@/components/sections/LeadersSection";
@@ -58,12 +60,12 @@ export default function SectionRenderer({
 
    return sections.map((section: any, index: number) => {
 
-      // Debugging optional: Cek nama komponen yang masuk
-      // console.log("Rendering Component:", section.__component);
-
       switch (section.__component) {
 
-         // 1. PAGE HEADER
+         // =========================================================
+         // GROUP 1: LAYOUT & BASIC
+         // =========================================================
+
          case "layout.page-header": {
             const specificImg = section.backgroundImage?.url || section.backgroundImage?.data?.attributes?.url;
             const finalBg = specificImg || globalData?.globalHeroUrl;
@@ -80,52 +82,55 @@ export default function SectionRenderer({
             );
          }
 
-         // 2. RICH TEXT
          case "sections.rich-text":
          case "layout.rich-text":
-            return <RichText key={index} data={section} />;
+            // ✅ FIX: Hapus wrapper div container di sini.
+            // Biarkan komponen RichText mengatur margin-nya sendiri.
+            return (
+               <RichText
+                  key={index}
+                  data={{ content: section.content }}
+               />
+            );
 
-         // 3. IMAGE SECTION
+         // =========================================================
+         // GROUP 2: MEDIA & CONTENT
+         // =========================================================
+
          case "sections.image-section":
             return <ImageSection key={index} data={section} />;
 
-         // 4. VIDEO SECTION
          case "sections.video-section":
             return <VideoSection key={index} data={section} />;
 
-         // 5. FEATURE LIST SECTION (Capaian Lulusan)
-         case "sections.feature-list-section":
-            return <FeatureListSection key={index} data={section} />;
-
-         // 6. PROFILE GRID SECTION (Profil Lulusan / Tim / Staff)
-         case "sections.profile-grid-section":
-            return <ProfileGridSection key={index} data={section} />;
-
-         // 7. CURRICULUM SECTION (Mata Kuliah Accordion)
-         case "sections.curriculum-section":
-            return <CurriculumSection key={index} data={section} />;
-
-         // 8. GALLERY SECTION (Galeri Foto)
          case "sections.gallery-section":
             return <GallerySection key={index} data={section} />;
 
-         // 9. DOCUMENT SECTION (Dokumen & SOP)
          case "sections.document-section":
             return <DocumentSection key={index} data={section} />;
 
-         // 10. PUBLICATION SECTION (Publikasi Ilmiah)
          case "sections.publication-section":
             return <PublicationSection key={index} data={section} />;
 
-         // 11. VISI MISI SECTION
+         // =========================================================
+         // GROUP 3: LISTS & GRIDS (ACADEMIC/PROFILE)
+         // =========================================================
+
+         case "sections.feature-list-section":
+            return <FeatureListSection key={index} data={section} />;
+
+         case "sections.profile-grid-section":
+            return <ProfileGridSection key={index} data={section} />;
+
+         case "sections.curriculum-section":
+            return <CurriculumSection key={index} data={section} />;
+
          case "sections.visi-misi-section":
             return <VisiMisiSection key={index} data={section} />;
 
-         // 12. LEADERS SECTION
          case "sections.leaders-section":
             return <LeadersSection key={index} data={section} />;
 
-         // 13. FACILITIES LIST SECTION
          case "sections.facilities-list-section":
             return (
                <FacilitiesListSection
@@ -135,7 +140,21 @@ export default function SectionRenderer({
                />
             );
 
-         // 14. AGENDA PREVIEW
+         // =========================================================
+         // GROUP 4: DYNAMIC DATA (NEWS & AGENDA)
+         // =========================================================
+
+         case "sections.news-dashboard":
+         case "sections.news-section":
+            return (
+               <NewsDashboard
+                  key={index}
+                  initialData={globalData?.articles || []}
+                  locale={globalData?.locale || "id"}
+                  isHomePage={true}
+               />
+            );
+
          case "sections.agenda-preview":
             return (
                <AgendaPreview
@@ -146,7 +165,9 @@ export default function SectionRenderer({
                />
             );
 
-         // --- EXISTING COMPONENTS ---
+         // =========================================================
+         // GROUP 5: LEGACY / EXISTING COMPONENTS
+         // =========================================================
 
          case "sections.hero-slider":
             return <HeroSlider key={index} data={section} />;
@@ -175,7 +196,6 @@ export default function SectionRenderer({
             }));
             return <WelcomeSection key={index} data={welcomeProfiles} />;
 
-         // ✅ PERBAIKAN STATS SECTION: Menambahkan props 'title'
          case "sections.stats":
             const statsData: StatItemData[] = section.items.map((item: any) => ({
                id: item.id,
@@ -186,7 +206,7 @@ export default function SectionRenderer({
             return (
                <StatsSection
                   key={index}
-                  title={section.title} // <-- Props Title ditambahkan
+                  title={section.title}
                   data={statsData}
                />
             );
@@ -198,18 +218,6 @@ export default function SectionRenderer({
                imageUrl: getStrapiMedia(item.image?.url) || ""
             }));
             return <AccreditationSection key={index} title={section.title} data={certData} />;
-
-         // Menghandle kedua kemungkinan nama komponen berita
-         case "sections.news-dashboard":
-         case "sections.news-section":
-            return (
-               <NewsDashboard
-                  key={index}
-                  initialData={globalData?.articles || []}
-                  locale={globalData?.locale || "id"}
-                  isHomePage={true}
-               />
-            );
 
          case "sections.partnership":
             const partnershipData: PartnerItemData[] = (section.items || []).map((item: any) => ({
@@ -250,9 +258,13 @@ export default function SectionRenderer({
          case "sections.faq-section":
             return <FAQSection key={index} data={section} />;
 
+         // =========================================================
          // DEFAULT FALLBACK
+         // =========================================================
          default:
-            console.warn(`[SectionRenderer] Unknown component: ${section.__component}`);
+            if (process.env.NODE_ENV === 'development') {
+               console.warn(`⚠️ [SectionRenderer] Unhandled component type: "${section.__component}"`);
+            }
             return null;
       }
    });

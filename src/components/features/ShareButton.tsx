@@ -1,82 +1,130 @@
-// File: src/components/features/ShareButton.tsx
 "use client";
 
-import { FaShareAlt, FaFacebook, FaTwitter, FaWhatsapp } from "react-icons/fa";
 import { useState, useEffect } from "react";
+import { FaFacebook, FaWhatsapp, FaLinkedin } from "react-icons/fa";
+import { FaXTwitter } from "react-icons/fa6";
+import { Share2, Link as LinkIcon, Check } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export default function ShareButton({ title }: { title: string }) {
+  const t = useTranslations("UI");
   const [copied, setCopied] = useState(false);
-  const [shareUrl, setShareUrl] = useState("");
 
-  // Ambil URL browser saat komponen dimount (Client-side only)
+  // State untuk menyimpan URL
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+
   useEffect(() => {
-    // Kita menonaktifkan warning ini karena ini adalah pola standar Next.js
-    // untuk mengambil window.location setelah mounting agar tidak error saat SSR.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setShareUrl(window.location.href);
+    const timer = setTimeout(() => {
+      if (typeof window !== "undefined") {
+        setShareUrl(window.location.href);
+      }
+    }, 0);
+
+    // Cleanup timer (praktik yang baik)
+    return () => clearTimeout(timer);
   }, []);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(shareUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
   };
 
-  // Link Generator
-  // Cek apakah shareUrl sudah ada (untuk menghindari link kosong saat loading awal)
-  const currentUrl = shareUrl || "";
+  // Jika belum ada URL (Server-side atau belum mounted), jangan tampilkan apa-apa
+  // untuk mencegah Hydration Error.
+  if (!shareUrl) return null;
 
-  const facebookLink = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl)}`;
-  const twitterLink = `https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(currentUrl)}`;
-  const waLink = `https://wa.me/?text=${encodeURIComponent(title + " " + currentUrl)}`;
+  const encodedUrl = encodeURIComponent(shareUrl);
+  const encodedTitle = encodeURIComponent(title);
+
+  const socialLinks = [
+    {
+      name: "WhatsApp",
+      url: `https://wa.me/?text=${encodedTitle}%20${encodedUrl}`,
+      icon: FaWhatsapp,
+      color: "bg-[#25D366] hover:bg-[#128C7E]",
+      label: t("share_wa"),
+    },
+    {
+      name: "Facebook",
+      url: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
+      icon: FaFacebook,
+      color: "bg-[#1877F2] hover:bg-[#0C63D4]",
+      label: t("share_fb"),
+    },
+    {
+      name: "X (Twitter)",
+      url: `https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`,
+      icon: FaXTwitter,
+      color: "bg-black hover:bg-gray-800",
+      label: t("share_x"),
+    },
+    {
+      name: "LinkedIn",
+      url: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`,
+      icon: FaLinkedin,
+      color: "bg-[#0A66C2] hover:bg-[#004182]",
+      label: "Share to LinkedIn",
+    },
+  ];
 
   return (
-    <div className="flex items-center gap-4 py-6 border-t border-b border-gray-100 my-8">
-      <span className="text-gray-600 font-semibold flex items-center gap-2">
-        Share post ini <FaShareAlt />
-      </span>
+    <div className="py-8 border-t border-b border-gray-100 my-8">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
 
-      <div className="flex gap-3">
-        {/* Facebook */}
-        <a
-          href={facebookLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center hover:opacity-80 transition-opacity"
-          aria-label="Share on Facebook"
-        >
-          <FaFacebook />
-        </a>
+        <div className="flex items-center gap-2 text-gray-700 font-bold text-sm uppercase tracking-wide">
+          <Share2 size={18} className="text-[#005320]" />
+          <span>{t("share_label")}</span>
+        </div>
 
-        {/* Twitter / X */}
-        <a
-          href={twitterLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="w-8 h-8 rounded-full bg-sky-500 text-white flex items-center justify-center hover:opacity-80 transition-opacity"
-          aria-label="Share on Twitter"
-        >
-          <FaTwitter />
-        </a>
+        <div className="flex items-center gap-2">
 
-        {/* WhatsApp */}
-        <a
-          href={waLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center hover:opacity-80 transition-opacity"
-          aria-label="Share on WhatsApp"
-        >
-          <FaWhatsapp />
-        </a>
+          {socialLinks.map((item) => (
+            <a
+              key={item.name}
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`w-9 h-9 rounded-full text-white flex items-center justify-center transition-all duration-300 hover:-translate-y-1 hover:shadow-md ${item.color}`}
+              aria-label={item.label}
+              title={item.label}
+            >
+              <item.icon size={16} />
+            </a>
+          ))}
 
-        {/* Copy Link Button */}
-        <button
-          onClick={handleCopy}
-          className="px-3 py-1 text-xs border rounded hover:bg-gray-50 transition-colors"
-        >
-          {copied ? "Copied!" : "Copy Link"}
-        </button>
+          <div className="w-px h-6 bg-gray-200 mx-1"></div>
+
+          <button
+            onClick={handleCopy}
+            className={`
+              flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-300 border
+              ${copied
+                ? "bg-green-50 text-green-700 border-green-200"
+                : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-white hover:border-gray-300 hover:shadow-sm"
+              }
+            `}
+            aria-label={t("copy_link")}
+          >
+            {copied ? (
+              <>
+                <Check size={14} strokeWidth={3} />
+                <span>{t("copied")}</span>
+              </>
+            ) : (
+              <>
+                <LinkIcon size={14} />
+                <span>{t("copy_link")}</span>
+              </>
+            )}
+          </button>
+        </div>
+
       </div>
     </div>
   );

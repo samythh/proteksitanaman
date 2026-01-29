@@ -3,15 +3,15 @@
 
 import { useState } from "react";
 import { ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils/cn"; 
 
-// Tipe Data untuk 1 Item FAQ
+// Tipe Data
 interface FAQItemData {
    id: number;
    question: string;
    answer: string;
 }
 
-// Props yang diterima component
 interface FAQSectionProps {
    data: {
       title: string;
@@ -20,21 +20,19 @@ interface FAQSectionProps {
 }
 
 export default function FAQSection({ data }: FAQSectionProps) {
-   // State untuk melacak item mana yang sedang terbuka
    const [openIndex, setOpenIndex] = useState<number | null>(null);
 
    const toggleFAQ = (index: number) => {
       setOpenIndex(openIndex === index ? null : index);
    };
 
-   // Jika tidak ada data items, jangan render section
    if (!data || !data.items || data.items.length === 0) return null;
 
    return (
       <section className="bg-white py-16 md:py-24">
          <div className="container mx-auto px-6 md:px-12 lg:px-24">
 
-            {/* HEADER FAQ */}
+            {/* HEADER FAQ  */}
             <div className="text-center mb-12">
                <h2 className="text-3xl md:text-4xl font-bold text-gray-900 uppercase tracking-wide">
                   {data.title || "FAQ"}
@@ -44,7 +42,7 @@ export default function FAQSection({ data }: FAQSectionProps) {
             </div>
 
             {/* GRID LAYOUT */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 items-start">
                {data.items.map((item, index) => {
                   const isOpen = openIndex === index;
 
@@ -52,29 +50,47 @@ export default function FAQSection({ data }: FAQSectionProps) {
                      <div
                         key={item.id || index}
                         onClick={() => toggleFAQ(index)}
-                        className={`
-                  cursor-pointer bg-white rounded-xl border border-gray-200 p-5 shadow-sm 
-                  transition-all duration-300 hover:shadow-md
-                  ${isOpen ? 'ring-1 ring-[#749F74] border-[#749F74]' : ''}
-                `}
+                        role="button"
+                        tabIndex={0}
+                        aria-expanded={isOpen}
+                        onKeyDown={(e) => {
+                           if (e.key === "Enter" || e.key === " ") toggleFAQ(index);
+                        }}
+                        className={cn(
+                           "cursor-pointer bg-white rounded-xl border p-5 shadow-sm transition-all duration-300 hover:shadow-md h-full select-none",
+                           isOpen
+                              ? "border-[#749F74] ring-1 ring-[#749F74]"
+                              : "border-gray-200"
+                        )}
                      >
                         <div className="flex gap-4 items-start">
 
-                           {/* ICON PANAH */}
-                           <div className={`mt-0.5 text-[#749F74] transform transition-transform duration-300 ${isOpen ? 'rotate-90' : ''}`}>
+                           {/* ICON PANAH  */}
+                           <div className={cn(
+                              "mt-0.5 text-[#749F74] transform transition-transform duration-300 flex-shrink-0",
+                              isOpen && "rotate-90"
+                           )}>
                               <ChevronRight size={24} strokeWidth={2.5} />
                            </div>
 
                            {/* KONTEN */}
                            <div className="flex-1">
-                              <h3 className={`text-sm md:text-base font-bold text-gray-800 leading-snug ${isOpen ? 'mb-2' : 'mb-0'}`}>
+                              {/* Pertanyaan */}
+                              <h3 className={cn(
+                                 "text-sm md:text-base font-bold text-gray-800 leading-snug transition-all",
+                                 isOpen ? "mb-2" : "mb-0"
+                              )}>
                                  {item.question}
                               </h3>
 
-                              {/* Jawaban (Accordian Effect) */}
+                              {/* Jawaban (Accordion Effect) */}
                               <div
-                                 className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-96 opacity-100 mt-2' : 'max-h-0 opacity-0'}`}
+                                 className={cn(
+                                    "overflow-hidden transition-all duration-300 ease-in-out",
+                                    isOpen ? "max-h-96 opacity-100 mt-2" : "max-h-0 opacity-0"
+                                 )}
                               >
+                                 {/*Border Top Halus, Text Gray */}
                                  <p className="text-sm text-gray-600 leading-relaxed border-t border-gray-100 pt-2">
                                     {item.answer}
                                  </p>

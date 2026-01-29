@@ -1,23 +1,22 @@
 // File: src/components/ui/PageHeader.tsx
 import React from "react";
 import Image from "next/image";
-import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { Link } from "@/i18n/routing";
+import { ChevronRight, Home } from "lucide-react";
 import { getStrapiMedia } from "@/lib/strapi/utils";
 
 // --- TIPE DATA ---
-interface BreadcrumbItem {
+export interface BreadcrumbItem {
    label: string;
    url: string;
 }
 
 interface PageHeaderProps {
    title: string;
-   // ✅ UPDATE: Breadcrumb bisa String (lama) atau Array Object (baru)
    breadcrumb: string | BreadcrumbItem[];
    backgroundImageUrl?: string | null;
-   sectionTitle?: string;    // Contoh: "Staf Akademik"
-   sectionSubtitle?: string; // Contoh: "Departemen..."
+   sectionTitle?: string;
+   sectionSubtitle?: string;
 }
 
 export default function PageHeader({
@@ -36,82 +35,86 @@ export default function PageHeader({
          {/* --- BAGIAN 1: HERO IMAGE --- */}
          <div className="relative h-[40vh] min-h-[300px] w-full bg-gray-900 overflow-hidden">
 
-            {/* Background Image */}
+            {/* Background Image dengan Overlay */}
             {finalImage ? (
-               <Image
-                  src={finalImage}
-                  alt={title}
-                  fill
-                  priority
-                  className="object-cover opacity-60"
-               />
+               <>
+                  <Image
+                     src={finalImage}
+                     alt={title}
+                     fill
+                     priority
+                     className="object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/60 md:bg-black/50" />
+               </>
             ) : (
-               <div className="absolute inset-0 bg-gradient-to-r from-gray-900 to-gray-800 opacity-100" />
+               <div className="absolute inset-0 bg-gradient-to-br from-[#005320] to-[#002e12]" />
             )}
 
             {/* Content Tengah */}
             <div className="absolute inset-0 flex flex-col justify-center items-center text-center text-white p-4 mt-8 md:mt-16 z-10">
-               <h1 className="text-4xl md:text-5xl font-bold mb-3 drop-shadow-md animate-in fade-in slide-in-from-bottom-3 duration-700">
+               <h1 className="text-3xl md:text-5xl font-extrabold mb-4 drop-shadow-lg tracking-tight animate-in fade-in slide-in-from-bottom-3 duration-700">
                   {title}
                </h1>
 
-               {/* LOGIKA BREADCRUMB HYBRID */}
-               <div className="text-sm md:text-base opacity-90 font-medium tracking-wide flex items-center justify-center gap-2 animate-in fade-in delay-200 duration-700">
+               {/* LOGIKA BREADCRUMB */}
+               <div className="text-sm md:text-base text-gray-200 font-medium tracking-wide flex items-center justify-center gap-2 animate-in fade-in delay-200 duration-700 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm">
 
                   {Array.isArray(breadcrumb) ? (
-                     // OPSI A: Jika Array (Bisa diklik)
-                     <nav className="flex items-center gap-2">
+                     // OPSI A: Breadcrumb Interaktif
+                     <nav aria-label="Breadcrumb" className="flex items-center gap-2">
                         {breadcrumb.map((item, index) => (
                            <React.Fragment key={index}>
                               {item.url !== "#" ? (
                                  <Link
                                     href={item.url}
-                                    className="hover:text-green-400 hover:underline transition-colors"
+                                    className="hover:text-yellow-400 hover:underline transition-colors flex items-center gap-1"
                                  >
+                                    {(item.label.toLowerCase() === 'beranda' || item.label.toLowerCase() === 'home') && <Home size={14} className="mb-0.5" />}
                                     {item.label}
                                  </Link>
                               ) : (
-                                 <span className="cursor-default">{item.label}</span>
+                                 <span className="cursor-default font-semibold text-yellow-400">
+                                    {item.label}
+                                 </span>
                               )}
 
                               {/* Separator Panah */}
                               {index < breadcrumb.length - 1 && (
-                                 <ChevronRight size={14} className="opacity-70" />
+                                 <ChevronRight size={14} className="opacity-50" />
                               )}
                            </React.Fragment>
                         ))}
                      </nav>
                   ) : (
-                     // OPSI B: Jika String (Teks biasa - Lowercase sesuai desain lama)
-                     <span className="lowercase">{breadcrumb}</span>
+                     // OPSI B: Teks Statis
+                     <span className="capitalize">{breadcrumb}</span>
                   )}
 
                </div>
             </div>
          </div>
 
-         {/* --- BAGIAN 2: JUDUL SEKSI (Desain Lama) --- */}
+         {/* --- BAGIAN 2: JUDUL SEKSI (Opsional) --- */}
          {hasBottomSection && (
-            <div className="container mx-auto px-4 mt-14 relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
+            <div className="container mx-auto px-4 -mb-6 mt-12 relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
                <div className="text-center mb-10">
-
-                  {/* 1. Judul Hitam */}
+                  {/* 1. Judul Utama */}
                   {sectionTitle && (
-                     <h2 className="text-2xl font-bold text-gray-800">
+                     <h2 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-wide">
                         {sectionTitle}
                      </h2>
                   )}
 
-                  {/* 2. Sub-judul Hijau */}
+                  {/* 2. Sub-judul */}
                   {sectionSubtitle && (
-                     <h3 className="text-xl font-medium text-green-600 mt-1">
+                     <h3 className="text-lg md:text-xl font-medium text-[#005320] mt-2">
                         {sectionSubtitle}
                      </h3>
                   )}
 
-                  {/* 3. Garis Hijau */}
-                  <div className="w-16 h-1 bg-green-600 mx-auto mt-4 rounded-full mb-6"></div>
-
+                  {/* 3. Dekorasi Garis */}
+                  <div className="w-20 h-1.5 bg-[#005320] mx-auto mt-4 rounded-full"></div>
                </div>
             </div>
          )}

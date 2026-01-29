@@ -1,65 +1,92 @@
 // File: src/lib/strapi/utils.ts
 
-// Mendapatkan URL API Strapi dari env atau default localhost
-export function getStrapiURL(path = "") {
-   return `${process.env.NEXT_PUBLIC_STRAPI_API_URL || "http://localhost:1337"}${path}`;
+import { CONFIG } from "@/lib/config";
+
+// --- 1. URL HELPER ---
+
+/**
+ * Mendapatkan URL lengkap ke Strapi.
+ * Menggunakan konfigurasi terpusat dari src/lib/config.ts
+ */
+export function getStrapiURL(path = ""): string {
+   // Pastikan path selalu diawali slash jika belum ada
+   const cleanPath = path !== "" && !path.startsWith("/") ? `/${path}` : path;
+   return `${CONFIG.STRAPI_HOST}${cleanPath}`;
 }
 
-// Helper untuk menampilkan gambar.
-// Jika URL gambar relatif (/uploads/...), tambahkan domain Strapi.
-// Jika URL sudah absolut (https://...), biarkan apa adanya.
-export function getStrapiMedia(url: string | null) {
-   if (url == null) {
+// --- 2. MEDIA HELPER ---
+
+/**
+ * Helper untuk menampilkan gambar dari Strapi.
+ * Menangani URL relatif (/uploads/...) dan absolut (https://...).
+ * @param url - String URL gambar (bisa null/undefined)
+ */
+export function getStrapiMedia(url: string | null | undefined): string | null {
+   if (!url) {
       return null;
    }
 
-   // Cek apakah URL sudah memiliki protokol (http/https)
+   // 1. Jika URL sudah memiliki protokol (external image / S3 bucket)
    if (url.startsWith("http") || url.startsWith("//")) {
       return url;
    }
 
-   // Jika tidak, gabungkan dengan URL Strapi
-   return `${getStrapiURL()}${url}`;
+   // 2. Jika URL relatif (local upload), gabungkan dengan STRAPI_HOST
+   // Pastikan url diawali slash agar rapi
+   const cleanUrl = url.startsWith("/") ? url : `/${url}`;
+
+   return `${CONFIG.STRAPI_HOST}${cleanUrl}`;
 }
 
-// Fungsi Rekursif untuk meratakan (flatten) respon Strapi yang berjenjang.
-// Strapi v4/v5 seringkali membungkus data dalam { data: { attributes: ... } }
-// Fungsi ini mengubahnya menjadi object data biasa agar mudah dipakai di frontend.
-export function flattenAttributes(data: unknown): unknown {
-   // 1. Jika data null/undefined, kembalikan null
-   if (!data) return null;
+// --- 3. DATA TRANSFORMATION (FLATTEN) ---
 
-   // 2. Jika data adalah array, lakukan flatten pada setiap itemnya
+/**
+ * Fungsi Rekursif untuk meratakan (flatten) response Strapi yang berjenjang.
+ * Mengubah { data: { id: 1, attributes: { title: "X" } } } menjadi { id: 1, title: "X" }
+ * * @template T - Tipe data hasil flatten (opsional)
+ */
+export function flattenAttributes<T = unknown>(data: unknown): T {
+   // 1. Null check (null atau undefined)
+   if (!data) return null as T;
+
+   // 2. Jika data adalah array, flatten setiap item
    if (Array.isArray(data)) {
-      return data.map(flattenAttributes);
+      return data.map((item) => flattenAttributes(item)) as unknown as T;
    }
 
    // 3. Jika data adalah object
-   if (typeof data === "object" && data !== null) {
-      // Casting ke Record<string, unknown> agar aman diakses
+   if (typeof data === "object") {
+      // Casting ke bentuk Record agar properti bisa diakses
       const obj = data as Record<string, unknown>;
 
-      const flattened: Record<string, unknown> = {};
-
-      // Jika ada properti 'data', kita ambil isinya (unwrap)
+      // A. Handle wrapper 'data' (Strapi v4 standard wrapper)
       if ("data" in obj) {
          return flattenAttributes(obj.data);
       }
 
-      // Jika ada properti 'attributes', kita unwrap isinya
+      // B. Handle wrapper 'attributes'
+      // Strapi memisahkan ID dan Attributes. Kita gabungkan di sini.
       if ("attributes" in obj) {
-         return flattenAttributes(obj.attributes);
+         const attributes = flattenAttributes(obj.attributes) as Record<string, unknown>;
+         const id = obj.id;
+
+         // Jika ada ID di level luar (sibling dari attributes), masukkan ke dalam object
+         if (id) {
+            return { id, ...attributes } as unknown as T;
+         }
+         return attributes as unknown as T;
       }
 
-      // Iterasi setiap key dalam object
+      // C. Iterasi object biasa (bukan wrapper Strapi)
+      const flattened: Record<string, unknown> = {};
       for (const key in obj) {
-         // Lakukan flatten secara rekursif pada setiap value
+         // Rekursif untuk nested object/array di dalam field
          flattened[key] = flattenAttributes(obj[key]);
       }
 
-      return flattened;
+      return flattened as T;
    }
 
-   // 4. Jika tipe primitif (string, number, boolean), kembalikan langsung
-   return data;
+   // 4. Primitive (string, number, boolean) kembalikan langsung
+   return data as T;
 }

@@ -3,54 +3,79 @@ import React from 'react';
 import NavbarClient from './NavbarClient';
 import { fetchAPI } from '@/lib/strapi/fetcher';
 import { getStrapiMedia } from '@/lib/strapi/utils';
+import { StrapiImage, StrapiEntity } from '@/types/shared';
+import { StrapiCollectionResponse, StrapiSingleResponse } from '@/types/strapi';
 
-interface StrapiNavItem {
-   id: number;
+// --- TYPE DEFINITIONS ---
+
+interface LinkItem extends StrapiEntity {
+   label: string;
+   url: string;
+}
+
+interface MenuSection extends StrapiEntity {
+   title: string;
+   links: LinkItem[];
+}
+
+interface NavItem extends StrapiEntity {
    label: string;
    url: string;
    order: number;
-   sections: {
-      id: number;
-      title: string;
-      links: { id: number; label: string; url: string }[];
-   }[];
+   sections?: MenuSection[];
 }
 
-// PERBAIKAN: Tambahkan siteName dan siteDescription
-interface StrapiGlobal {
+interface GlobalData extends StrapiEntity {
    siteName: string;
    siteDescription: string;
-   logo?: { url: string };
+   logo?: StrapiImage;
 }
 
-async function getNavbarData(locale: string): Promise<StrapiNavItem[]> {
+// --- DATA FETCHING ---
+
+async function getNavbarData(locale: string): Promise<NavItem[]> {
    try {
       const path = "/navigations";
       const urlParams = {
-         locale: locale,
+         locale,
          sort: "order:asc",
-         populate: { sections: { populate: { links: true } } },
+         populate: {
+            sections: {
+               populate: {
+                  links: true
+               }
+            }
+         },
       };
-      const res = await fetchAPI(path, urlParams);
-      return res.data as StrapiNavItem[];
+
+      const res = await fetchAPI<StrapiCollectionResponse<NavItem>>(path, urlParams);
+
+      // Sekarang res.data valid (karena ada di dalam wrapper)
+      return res.data || [];
    } catch (err) {
-      console.error("Gagal mengambil data Navbar:", err);
+      console.error("❌ [Navbar] Gagal mengambil menu:", err);
       return [];
    }
 }
 
-async function getGlobalData(locale: string): Promise<StrapiGlobal | null> {
+async function getGlobalData(locale: string): Promise<GlobalData | null> {
    try {
-      const res = await fetchAPI("/global", {
-         locale: locale,
-         populate: { logo: true }
-      });
-      return res.data as StrapiGlobal;
+      const path = "/global";
+      const urlParams = {
+         locale,
+         populate: { logo: true },
+      };
+
+      const res = await fetchAPI<StrapiSingleResponse<GlobalData>>(path, urlParams);
+
+      return res.data || null;
    } catch (err) {
-      console.error("Gagal mengambil data Global:", err);
+      console.error("❌ [Navbar] Gagal mengambil Global Data:", err);
       return null;
    }
 }
+
+// --- SERVER COMPONENT ---
 
 export default async function Navbar({ locale }: { locale: string }) {
    const [navData, globalData] = await Promise.all([
@@ -60,26 +85,29 @@ export default async function Navbar({ locale }: { locale: string }) {
 
    const formattedMenu = navData.map((item) => ({
       id: item.id,
+      key: item.documentId || item.id,
       label: item.label,
       url: item.url,
       sections: item.sections?.map((sec) => ({
          id: sec.id,
+         key: sec.documentId || sec.id,
          title: sec.title,
-         links: sec.links.map((l) => ({ id: l.id, label: l.label, url: l.url }))
+         links: sec.links.map((l) => ({
+            id: l.id,
+            label: l.label,
+            url: l.url
+         }))
       })) || []
    }));
 
-   const logoUrl = getStrapiMedia(globalData?.logo?.url || null) || "/logo-unand.png";
-
-   // Ambil teks dari Strapi, atau gunakan default jika kosong
+   const logoUrl = getStrapiMedia(globalData?.logo?.url) || "/logo-unand.png";
    const siteName = globalData?.siteName || "Departemen Proteksi Tanaman";
-   const siteDescription = globalData?.siteDescription || "";
+   const siteDescription = globalData?.siteDescription || "Universitas Andalas";
 
    return (
       <NavbarClient
          menuItems={formattedMenu}
          logoUrl={logoUrl}
-         // PERBAIKAN: Kirim props ini ke Client
          siteName={siteName}
          siteDescription={siteDescription}
       />

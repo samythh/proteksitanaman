@@ -1,75 +1,28 @@
-// File: src/components/features/FacilitiesListSection.tsx
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
+import { useTranslations } from "next-intl";
 import { ArrowUpRight, X, ChevronDown, Image as ImageIcon, PlayCircle } from "lucide-react";
 import { getStrapiMedia } from "@/lib/strapi/utils";
+import { cn } from "@/lib/utils/cn";
 
-// --- KAMUS TERJEMAHAN ---
-const DICTIONARY = {
-   id: {
-      featuredBadge: "Fasilitas Unggulan",
-      exploreBtn: "Jelajahi Fasilitas",
-      loadMoreBtn: "MUAT LEBIH BANYAK",
-      endOfList: "Akhir Daftar",
-      noMedia: "Tidak ada gambar"
-   },
-   en: {
-      featuredBadge: "Featured Facility",
-      exploreBtn: "Explore Facility",
-      loadMoreBtn: "LOAD MORE",
-      endOfList: "End of List",
-      noMedia: "No image available"
-   }
-};
+// --- TYPE DEFINITIONS ---
+interface StrapiImageV5 {
+   id: number;
+   url: string;
+   alternativeText?: string;
+}
 
-// --- ANIMATION WRAPPER COMPONENT (DIPERBAIKI) ---
-const ScrollReveal = ({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) => {
-   const [isVisible, setIsVisible] = useState(false);
-   const ref = useRef<HTMLDivElement>(null);
-
-   useEffect(() => {
-      // ✅ FIX: Simpan ref.current ke variabel lokal 'element'
-      const element = ref.current;
-
-      const observer = new IntersectionObserver(
-         (entries) => {
-            if (entries[0].isIntersecting) {
-               setIsVisible(true);
-               // Gunakan variabel lokal 'element'
-               if (element) observer.unobserve(element);
-            }
-         },
-         { threshold: 0.15 }
-      );
-
-      // Gunakan variabel lokal 'element' saat observe
-      if (element) {
-         observer.observe(element);
-      }
-
-      return () => {
-         // ✅ Gunakan variabel lokal 'element' saat cleanup
-         if (element) observer.disconnect();
-      };
-   }, []);
-
-   return (
-      <div
-         ref={ref}
-         className={`transition-all duration-1000 ease-out transform ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-24"
-            }`}
-         style={{ transitionDelay: `${delay}ms` }}
-      >
-         {children}
-      </div>
-   );
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type FacilityData = any;
+interface FacilityV5 {
+   id: number;
+   name: string;
+   slug: string;
+   description: string;
+   youtube_id?: string;
+   images?: StrapiImageV5[];
+}
 
 interface PageConfig {
    section_label?: string;
@@ -80,32 +33,30 @@ interface PageConfig {
 
 interface FacilitiesListSectionProps {
    data: {
-      facilities: FacilityData[];
+      facilities: FacilityV5[];
    };
    config?: PageConfig | null;
    locale: string;
 }
 
 interface ItemProps {
-   item: FacilityData;
+   item: FacilityV5;
    index: number;
    onImageClick: (url: string) => void;
-   locale: string;
 }
 
-const FacilityItemCard = ({ item, index, onImageClick, locale }: ItemProps) => {
-   const data = item.attributes || item;
-   const { name, slug, description, youtube_id, images } = data;
-   const gallery = images?.data || images || [];
+// --- ITEM CARD ---
+const FacilityItemCard = ({ item, index, onImageClick }: ItemProps) => {
+   const t = useTranslations("FacilitiesList");
+   const { name, slug, description, youtube_id, images } = item;
 
-   const t = DICTIONARY[locale === 'en' ? 'en' : 'id'];
+   const gallery = Array.isArray(images) ? images : [];
    const isEven = index % 2 === 0;
 
-   // 1. Coba ambil gambar dari upload Strapi
-   let coverImage = gallery.length > 0 ? getStrapiMedia(gallery[0].attributes?.url || gallery[0].url) : null;
-
-   // 2. Jika tidak ada gambar upload, tapi ada YouTube ID -> Ambil Thumbnail YouTube
+   // Logic Cover Image
+   let coverImage = gallery.length > 0 ? getStrapiMedia(gallery[0].url) : null;
    const isYoutubeThumbnail = !coverImage && youtube_id;
+
    if (isYoutubeThumbnail) {
       coverImage = `https://img.youtube.com/vi/${youtube_id}/maxresdefault.jpg`;
    }
@@ -113,24 +64,33 @@ const FacilityItemCard = ({ item, index, onImageClick, locale }: ItemProps) => {
    const remainingImages = gallery.slice(1, 4);
 
    return (
-      <div className={`group relative flex flex-col lg:flex-row gap-8 lg:gap-16 items-center py-12 ${!isEven ? 'lg:flex-row-reverse' : ''}`}>
+      <div className={cn(
+         "group relative flex flex-col lg:flex-row gap-8 lg:gap-16 items-center py-8 border-b border-gray-100 last:border-0",
+         !isEven && "lg:flex-row-reverse"
+      )}>
 
          {/* MEDIA SECTION */}
          <div className="w-full lg:w-1/2 relative">
             {/* Background Number */}
-            <div className={`absolute -top-20 -z-10 text-[10rem] font-black text-gray-100 select-none leading-none ${isEven ? '-left-10' : '-right-10'}`}>
+            <div className={cn(
+               "absolute -top-16 -z-10 text-[8rem] md:text-[10rem] font-black text-gray-100 select-none leading-none opacity-50 lg:opacity-100",
+               isEven ? "-left-4 lg:-left-10" : "-right-4 lg:-right-10"
+            )}>
                {String(index + 1).padStart(2, '0')}
             </div>
 
-            {/* Main Image Card */}
-            <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white aspect-[4/3] group-hover:scale-[1.02] transition-transform duration-500 bg-gray-100">
+            <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white aspect-[4/3] bg-gray-100 transform transition-transform duration-500 hover:scale-[1.01] group-hover:shadow-3xl">
                {coverImage ? (
-                  <div className="relative w-full h-full cursor-pointer" onClick={() => onImageClick(coverImage!)}>
+                  <div
+                     className="relative w-full h-full cursor-pointer group/img"
+                     onClick={() => coverImage && onImageClick(coverImage)}
+                  >
                      <Image
                         src={coverImage}
                         alt={name}
                         fill
-                        className="object-cover transition-transform duration-700 group-hover:scale-110"
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                        className="object-cover transition-transform duration-700 group-hover/img:scale-110"
                         onError={(e) => {
                            if (isYoutubeThumbnail) {
                               const target = e.target as HTMLImageElement;
@@ -138,10 +98,8 @@ const FacilityItemCard = ({ item, index, onImageClick, locale }: ItemProps) => {
                            }
                         }}
                      />
-
-                     {/* Overlay Icon */}
-                     <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                        <div className="bg-white/90 backdrop-blur p-4 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
+                     <div className="absolute inset-0 bg-black/10 group-hover/img:bg-black/20 transition-colors flex items-center justify-center">
+                        <div className="bg-white/90 backdrop-blur p-4 rounded-full shadow-lg opacity-0 group-hover/img:opacity-100 transform translate-y-4 group-hover/img:translate-y-0 transition-all duration-300">
                            {isYoutubeThumbnail ? (
                               <PlayCircle className="text-red-600" size={32} />
                            ) : (
@@ -151,31 +109,50 @@ const FacilityItemCard = ({ item, index, onImageClick, locale }: ItemProps) => {
                      </div>
                   </div>
                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400 font-medium">
-                     {t.noMedia}
+                  <div className="w-full h-full flex items-center justify-center text-gray-400 font-medium bg-gray-50">
+                     <ImageIcon className="mr-2 opacity-50" />
+                     {t("no_media")}
                   </div>
                )}
             </div>
 
-            {/* Thumbnail Gallery */}
+            {/* Thumbnails Gallery */}
             {remainingImages.length > 0 && (
-               <div className={`absolute -bottom-6 flex gap-3 ${isEven ? 'right-4 lg:-right-12' : 'left-4 lg:-left-12'}`}>
-                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                  {remainingImages.map((img: any, idx: number) => {
-                     const thumbUrl = getStrapiMedia(img.attributes?.url || img.url);
+               <div className={cn(
+                  "absolute -bottom-6 flex gap-3 z-10",
+                  isEven ? "right-4 lg:-right-12" : "left-4 lg:-left-12"
+               )}>
+                  {remainingImages.map((img, idx) => {
+                     const thumbUrl = getStrapiMedia(img.url);
+                     if (!thumbUrl) return null;
+
                      return (
                         <div
-                           key={idx}
-                           onClick={() => thumbUrl && onImageClick(thumbUrl)}
+                           key={img.id || idx}
+                           onClick={() => onImageClick(thumbUrl)}
                            className="w-16 h-16 md:w-20 md:h-20 rounded-xl border-2 border-white shadow-lg overflow-hidden cursor-pointer hover:-translate-y-1 transition-transform relative bg-gray-200"
                         >
-                           {thumbUrl && <Image src={thumbUrl} alt="Thumb" fill className="object-cover" />}
+                           <Image
+                              src={thumbUrl}
+                              alt={img.alternativeText || `Thumb ${idx}`}
+                              fill
+                              sizes="80px"
+                              className="object-cover hover:scale-110 transition-transform"
+                           />
                         </div>
                      );
                   })}
+                  {/* Counter Badge */}
                   {gallery.length > 4 && (
-                     <div className="w-16 h-16 md:w-20 md:h-20 rounded-xl border-2 border-white shadow-lg bg-[#005320] text-white flex items-center justify-center font-bold text-sm">
-                        +{gallery.length - 4}
+                     <div
+                        className="w-16 h-16 md:w-20 md:h-20 rounded-xl border-2 border-white shadow-lg bg-[#005320] text-white flex flex-col items-center justify-center font-bold text-sm cursor-pointer hover:-translate-y-1 transition-transform"
+                        onClick={() => {
+                           const firstUrl = getStrapiMedia(gallery[0].url);
+                           if (firstUrl) onImageClick(firstUrl);
+                        }}
+                     >
+                        <span>+{gallery.length - 4}</span>
+                        <span className="text-[10px] font-normal opacity-80">{t("more_images")}</span>
                      </div>
                   )}
                </div>
@@ -183,23 +160,28 @@ const FacilityItemCard = ({ item, index, onImageClick, locale }: ItemProps) => {
          </div>
 
          {/* TEXT SECTION */}
-         <div className="w-full lg:w-1/2 flex flex-col gap-6 relative z-10 px-2">
+         <div className="w-full lg:w-1/2 flex flex-col gap-5 relative z-0 px-2">
             <div>
-               <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-50 text-[#005320] rounded-full text-xs font-bold uppercase tracking-wider mb-4 border border-green-100">
-                  {t.featuredBadge}
+               <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-50 text-[#005320] rounded-full text-xs font-bold uppercase tracking-wider mb-4 border border-green-100 shadow-sm">
+                  {t("featured_badge")}
                </div>
-               <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-gray-900 leading-tight mb-4">{name}</h2>
-               <div className="w-20 h-1.5 bg-yellow-400 rounded-full mb-6"></div>
+               <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-gray-900 leading-tight mb-4">
+                  {name}
+               </h2>
+               <div className="w-24 h-1.5 bg-yellow-400 rounded-full mb-6"></div>
                <p className="text-gray-600 text-base md:text-lg leading-relaxed text-justify line-clamp-4">
                   {description}
                </p>
             </div>
-            <div className="pt-4">
-               <Link href={`/${locale}/profil/fasilitas/${slug}`} className="inline-flex items-center gap-3 text-[#005320] font-bold text-lg group/link">
+            <div className="pt-2">
+               <Link
+                  href={`/profil/fasilitas/${slug}`}
+                  className="inline-flex items-center gap-3 text-[#005320] font-bold text-lg group/link"
+               >
                   <span className="border-b-2 border-[#005320] pb-0.5 group-hover/link:border-yellow-400 transition-colors">
-                     {t.exploreBtn}
+                     {t("explore_btn")}
                   </span>
-                  <div className="bg-[#005320] text-white p-2 rounded-full group-hover/link:bg-yellow-400 group-hover/link:text-[#005320] transition-all transform group-hover/link:rotate-45">
+                  <div className="bg-[#005320] text-white p-2 rounded-full group-hover/link:bg-yellow-400 group-hover/link:text-[#005320] transition-all transform group-hover/link:rotate-45 shadow-md">
                      <ArrowUpRight size={20} />
                   </div>
                </Link>
@@ -209,76 +191,78 @@ const FacilityItemCard = ({ item, index, onImageClick, locale }: ItemProps) => {
    );
 };
 
-export default function FacilitiesListSection({ data, config, locale }: FacilitiesListSectionProps) {
+// --- MAIN COMPONENT ---
+export default function FacilitiesListSection({ data, config }: FacilitiesListSectionProps) {
    const allFacilities = data?.facilities || [];
-   const [itemsCnt, setItemsCnt] = useState(3);
-   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-   const currentItems = allFacilities.slice(0, itemsCnt);
 
-   const t = DICTIONARY[locale === 'en' ? 'en' : 'id'];
+   const [itemsCnt, setItemsCnt] = useState(allFacilities.length);
+   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+   const currentItems = allFacilities.slice(0, itemsCnt);
+   const t = useTranslations("FacilitiesList");
+
+   // Load more (Backup logic jika data sangat banyak nanti)
+   const handleLoadMore = () => setItemsCnt((prev) => prev + 5);
 
    if (allFacilities.length === 0) return null;
 
    return (
       <section className="bg-white pt-0 pb-24 px-4 md:px-12 relative overflow-hidden">
+         {/* Decorative Blobs */}
          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-green-50 rounded-full blur-3xl opacity-50 -translate-y-1/2 translate-x-1/4 pointer-events-none"></div>
          <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-yellow-50 rounded-full blur-3xl opacity-50 translate-y-1/3 -translate-x-1/4 pointer-events-none"></div>
 
          <div className="container mx-auto max-w-7xl relative z-10">
-
-            {/* Header Section (Dengan Animasi Fade In) */}
-            <ScrollReveal delay={0}>
-               <div className="text-center max-w-3xl mx-auto mb-12">
-                  {config?.section_label && (
-                     <h2 className="text-sm font-bold tracking-[0.2em] text-yellow-500 uppercase mb-3">
-                        {config.section_label}
-                     </h2>
+            <div className="text-center max-w-3xl mx-auto mb-16 animate-in fade-in slide-in-from-bottom-4 duration-700">
+               {config?.section_label && (
+                  <h2 className="text-sm font-bold tracking-[0.2em] text-yellow-500 uppercase mb-3">
+                     {config.section_label}
+                  </h2>
+               )}
+               <h3 className="text-3xl md:text-5xl font-extrabold text-gray-900 mb-6 leading-tight">
+                  {config?.title_main || "Fasilitas"} <br />
+                  {config?.title_highlight && (
+                     <span className="text-[#005320]">{config.title_highlight}</span>
                   )}
+               </h3>
+               {config?.description && (
+                  <p className="text-gray-500 text-lg md:text-xl">
+                     {config.description}
+                  </p>
+               )}
+            </div>
 
-                  <h3 className="text-3xl md:text-5xl font-extrabold text-gray-900 mb-6">
-                     {config?.title_main || "Fasilitas"} <br />
-                     {config?.title_highlight && (
-                        <span className="text-[#005320]">{config.title_highlight}</span>
-                     )}
-                  </h3>
-
-                  {config?.description && (
-                     <p className="text-gray-500 text-lg">
-                        {config.description}
-                     </p>
-                  )}
-               </div>
-            </ScrollReveal>
-
-            {/* List Facilities (Setiap item dibungkus ScrollReveal) */}
-            <div className="flex flex-col gap-20 md:gap-32">
+            <div className="flex flex-col gap-12 md:gap-16">
                {currentItems.map((item, index) => (
-                  <ScrollReveal key={index} delay={(index % 3) * 100}>
+                  <div key={item.id || index} className="animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-forwards" style={{ animationDelay: `${index * 100}ms` }}>
                      <FacilityItemCard
                         item={item}
                         index={index}
-                        locale={locale}
                         onImageClick={setSelectedImage}
                      />
-                  </ScrollReveal>
+                  </div>
                ))}
             </div>
 
-            {/* Load More Button */}
-            <div className="mt-24 flex justify-center">
+            {/* Tombol Load More hanya muncul jika masih ada sisa data */}
+            <div className="mt-20 flex justify-center">
                {itemsCnt < allFacilities.length ? (
-                  <button onClick={() => setItemsCnt(prev => prev + 2)} className="group relative px-8 py-4 bg-white text-[#005320] font-bold rounded-full shadow-lg border border-gray-100 hover:shadow-xl hover:border-green-200 transition-all overflow-hidden">
+                  <button
+                     onClick={handleLoadMore}
+                     className="group relative px-8 py-4 bg-white text-[#005320] font-bold rounded-full shadow-lg border border-gray-100 hover:shadow-xl hover:border-green-200 transition-all overflow-hidden"
+                  >
                      <div className="absolute inset-0 bg-green-50 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
                      <span className="relative flex items-center gap-3">
-                        {t.loadMoreBtn}
+                        {t("load_more")}
                         <ChevronDown size={20} className="group-hover:translate-y-1 transition-transform" />
                      </span>
                   </button>
                ) : (
-                  <div className="flex flex-col items-center gap-2 text-gray-400 opacity-70">
+                  // Indikator Akhir List
+                  <div className="flex flex-col items-center gap-2 text-gray-400 opacity-70 animate-in fade-in">
                      <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
                      <span className="text-sm font-medium uppercase tracking-widest">
-                        {t.endOfList}
+                        {t("end_list")}
                      </span>
                   </div>
                )}
@@ -287,10 +271,25 @@ export default function FacilitiesListSection({ data, config, locale }: Faciliti
 
          {/* Lightbox Modal */}
          {selectedImage && (
-            <div className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setSelectedImage(null)}>
-               <button className="absolute top-6 right-6 text-white/70 hover:text-white hover:rotate-90 transition-all p-2 bg-white/10 rounded-full z-[10000]"><X size={32} /></button>
-               <div className="relative w-full max-w-6xl h-[85vh]" onClick={(e) => e.stopPropagation()}>
-                  <Image src={selectedImage} alt="Preview" fill className="object-contain" priority sizes="100vw" />
+            <div
+               className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300"
+               onClick={() => setSelectedImage(null)}
+            >
+               <button className="absolute top-6 right-6 text-white/70 hover:text-white hover:rotate-90 transition-all p-2 bg-white/10 rounded-full z-[10000]">
+                  <X size={32} />
+               </button>
+               <div
+                  className="relative w-full max-w-6xl h-[85vh] flex items-center justify-center"
+                  onClick={(e) => e.stopPropagation()}
+               >
+                  <Image
+                     src={selectedImage}
+                     alt="Preview"
+                     fill
+                     className="object-contain"
+                     priority
+                     sizes="100vw"
+                  />
                </div>
             </div>
          )}
