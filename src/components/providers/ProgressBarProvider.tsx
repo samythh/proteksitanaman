@@ -1,4 +1,4 @@
-// File: src/components/providers/ProgressBarProvider.tsx (FINAL)
+// File: src/components/providers/ProgressBarProvider.tsx 
 "use client";
 
 import NextTopLoader from "nextjs-toploader";
@@ -6,7 +6,7 @@ import NextTopLoader from "nextjs-toploader";
 export default function ProgressBarProvider() {
    return (
       <NextTopLoader
-         color="#fbbf24"       // 🟡 Kuning (Kontras dengan Hijau)
+         color="#fbbf24"       // Kuning (Kontras dengan Hijau)
          initialPosition={0.08}
          crawlSpeed={200}
          height={3}

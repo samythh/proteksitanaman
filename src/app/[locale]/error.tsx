@@ -1,23 +1,9 @@
 // File: src/app/[locale]/error.tsx
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect } from "react";
-import { useParams } from "next/navigation"; // ✅ Import useParams
 import ErrorState from "@/components/ui/ErrorState";
-
-// --- KAMUS BAHASA ---
-const DICTIONARY = {
-  id: {
-    title: "Oops! Ada Masalah Teknis",
-    desc: "Sistem kami mengalami kendala saat memuat konten ini. Jangan khawatir, tim teknis kami bisa memperbaikinya.",
-    btn: "Coba Lagi"
-  },
-  en: {
-    title: "Oops! Something Went Wrong",
-    desc: "Our system encountered an issue while loading this content. Don't worry, this is likely temporary.",
-    btn: "Try Again"
-  }
-};
 
 export default function Error({
   error,
@@ -26,22 +12,33 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  const params = useParams();
-  // Deteksi locale, default ke 'id' jika tidak terbaca
-  const locale = (params?.locale as "id" | "en") || "id";
-  const t = DICTIONARY[locale] || DICTIONARY.id;
+  // 1. Integrasi i18n
+  // Mengambil teks dari namespace "Error" (server_error_title, dll)
+  const t = useTranslations("Error");
 
   useEffect(() => {
-    console.error("⚠️ Aplikasi Error:", error);
+    // 2. Logging
+    // Di sinilah tempatnya jika Anda ingin mengirim error ke Sentry / LogRocket
+    console.error("🚨 [Global Error Boundary]:", error);
   }, [error]);
 
   return (
-    <div className="container mx-auto px-4 mt-20">
+    // Layout centering agar konsisten dengan Not Found page
+    <div className="container mx-auto px-4 flex items-center justify-center min-h-[60vh]">
       <ErrorState
-        title={t.title}      // ✅ Teks Dinamis
-        description={t.desc} // ✅ Teks Dinamis
-        code={process.env.NODE_ENV === "development" ? error.message : undefined}
-        onRetry={() => reset()}
+        title={t("server_error_title")}
+        description={t("server_error_desc")}
+        onRetry={reset}
+
+        // 3. Security & Debugging Logic 🛡️
+        // - Development: Tampilkan pesan error asli biar gampang fix bug.
+        // - Production: Tampilkan 'digest' (kode unik) agar user bisa lapor ("Error code: X82J"),
+        //   tapi TIDAK membocorkan rahasia sistem/stack trace ke publik.
+        code={
+          process.env.NODE_ENV === "development"
+            ? error.message
+            : error.digest ? `Digest: ${error.digest}` : undefined
+        }
       />
     </div>
   );

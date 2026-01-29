@@ -1,94 +1,168 @@
 // File: src/app/[locale]/informasi/berita/page.tsx
+
 import { getTranslations } from 'next-intl/server';
 import { fetchAPI } from '@/lib/strapi/fetcher';
+import { getStrapiMedia } from '@/lib/strapi/utils';
 import qs from 'qs';
 import NewsHeroSlider, { ArticleSlide } from '@/components/sections/NewsHeroSlider';
 import NewsDashboard, { NewsItem } from '@/components/sections/NewsDashboard';
+
+// --- TYPES ---
+interface StrapiEntity {
+   id: number;
+   attributes: Record<string, unknown>;
+}
+
+interface StrapiResponse<T> {
+   data: T[];
+   meta?: {
+      pagination?: {
+         total: number;
+         page: number;
+         pageSize: number;
+         pageCount: number;
+      }
+   }
+}
 
 type Props = {
    params: Promise<{ locale: string }>;
 };
 
-// --- 1. FETCH DATA ---
-async function getArticles(locale: string) {
+// --- HELPERS ---
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const normalizeArticle = (item: any): NewsItem => {
+   const attr = item.attributes || item;
+   const coverData = attr.cover?.data?.attributes || attr.cover || null;
+   const coverUrl = getStrapiMedia(coverData?.url);
+   const catData = attr.category?.data?.attributes || attr.category || null;
+
+   return {
+      id: item.id,
+      title: String(attr.title || ""),
+      slug: String(attr.slug || ""),
+      publishedAt: String(attr.publishedDate || attr.publishedAt || ""),
+      excerpt: String(attr.excerpt || ""),
+      cover: {
+         url: coverUrl || ""
+      },
+      category: catData ? {
+         name: String(catData.name),
+         color: String(catData.color)
+      } : undefined
+   };
+};
+
+// --- 1. FETCH FEATURED ---
+async function getFeaturedArticles(locale: string) {
    try {
       const query = qs.stringify({
          locale: locale,
-         sort: ['publishedDate:desc', 'publishedAt:desc'],
+         filters: {
+            isFeatured: { $eq: true }
+         },
+         sort: ['publishedAt:desc'],
+         pagination: { limit: 5 },
+         populate: {
+            cover: { fields: ['url', 'alternativeText'] },
+            category: { fields: ['name', 'slug', 'color'] }
+         },
+         fields: ['title', 'slug', 'publishedAt', 'excerpt'],
+      });
+
+      const res = await fetchAPI(`/articles?${query}`) as StrapiResponse<StrapiEntity>;
+      return res?.data || [];
+   } catch (error) {
+      console.error("[NewsPage] Error fetching featured articles:", error);
+      return [];
+   }
+}
+
+// --- 2. FETCH ALL ---
+async function getAllArticles(locale: string) {
+   try {
+      const query = qs.stringify({
+         locale: locale,
+         sort: ['publishedAt:desc'],
          pagination: {
             page: 1,
-            pageSize: 15, // Ambil cukup banyak data
+            pageSize: 15,
          },
          populate: {
             cover: { fields: ['url', 'alternativeText'] },
             category: { fields: ['name', 'slug', 'color'] }
          },
-         // Fields: excerpt saja, jangan description agar tidak error 400
-         fields: ['title', 'slug', 'publishedAt', 'publishedDate', 'excerpt'],
+         fields: ['title', 'slug', 'publishedAt', 'excerpt'],
       });
 
-      const res = await fetchAPI(`/articles?${query}`);
+      const res = await fetchAPI(`/articles?${query}`) as StrapiResponse<StrapiEntity>;
       return res?.data || [];
    } catch (error) {
-      console.error("Error fetching articles:", error);
+      console.error("[NewsPage] Error fetching all articles:", error);
       return [];
    }
 }
 
+// --- 3. METADATA (FIXED HARDCODE) ---
 export async function generateMetadata({ params }: Props) {
    const { locale } = await params;
-   const t = await getTranslations({ locale, namespace: 'Metadata' });
-   return { title: `Berita & Artikel - ${t('title')}` };
+   const t = await getTranslations({ locale, namespace: 'NewsPage' });
+   const tGlobal = await getTranslations({ locale, namespace: 'Metadata' });
+
+   return {
+      title: `${t('meta_title')} - ${tGlobal('title')}`
+   };
 }
 
+// --- 4. MAIN COMPONENT ---
 export default async function NewsPage({ params }: Props) {
    const { locale } = await params;
+   const t = await getTranslations({ locale, namespace: 'NewsPage' }); // ✅ Init Translation
 
-   const allArticles = await getArticles(locale);
+   // FETCH PARALEL
+   const [featuredRaw, allRaw] = await Promise.all([
+      getFeaturedArticles(locale),
+      getAllArticles(locale)
+   ]);
 
-   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-   const normalizedArticles = allArticles.map((item: any) => {
-      const attributes = item.attributes || item;
-      const coverUrl = attributes.cover?.data?.attributes?.url || attributes.cover?.url || "";
-      const catData = attributes.category?.data?.attributes || attributes.category || null;
+   // Normalisasi Data
+   const featuredList = featuredRaw.map(normalizeArticle);
+   const allList = allRaw.map(normalizeArticle);
 
-      return {
-         id: item.id,
-         title: attributes.title,
-         slug: attributes.slug,
-         publishedAt: attributes.publishedDate || attributes.publishedAt || "",
-         excerpt: attributes.excerpt || "",
-         cover: { url: coverUrl },
-         category: catData ? { name: catData.name, color: catData.color } : undefined
-      };
-   });
+   // LOGIKA FALLBACK SLIDER
+   const heroDataRaw = featuredList.length > 0 ? featuredList : allList.slice(0, 5);
+   const heroData: ArticleSlide[] = heroDataRaw as unknown as ArticleSlide[];
 
-   // --- LOGIKA BARU ---
-
-   // 1. Hero Data: Ambil 5 teratas untuk Highlight
-   const heroData: ArticleSlide[] = normalizedArticles.slice(0, 5);
-
-   // 2. Dashboard Data: Ambil SEMUA data (Tidak di-slice/dipotong)
-   // Jadi berita yang ada di Hero akan muncul lagi di Dashboard
-   const dashboardData: NewsItem[] = normalizedArticles;
+   // Data Dashboard
+   const dashboardData: NewsItem[] = allList;
 
    return (
-      <main className="w-full bg-gray-50 min-h-screen pt-24 pb-20">
+      <main className="w-full bg-gray-50 min-h-screen pt-24 -mt-2">
 
-         {/* Hero Slider */}
-         {heroData.length > 0 && (
-            <div className="mb-12">
-               <NewsHeroSlider articles={heroData} />
-            </div>
-         )}
+         {/* 1. CONTAINER HERO SLIDER */}
+         <div className="container mx-auto px-4 mb-16">
+            <h1 className="sr-only">{t('hero_sr_title')}</h1>
 
-         {/* Dashboard Berita */}
-         <NewsDashboard
-            initialData={dashboardData}
-            locale={locale}
-            isHomePage={false}
-         />
+            {/* Hero Slider */}
+            {heroData.length > 0 ? (
+               <section>
+                  <NewsHeroSlider articles={heroData} />
+               </section>
+            ) : (
+               <div className="h-64 flex items-center justify-center bg-white rounded-3xl border border-dashed border-gray-300">
+                  <p className="text-gray-400 font-medium">{t('no_news_display')}</p>
+               </div>
+            )}
+         </div>
 
+         {/* 2. DASHBOARD LIST */}
+         <section className="w-full">
+            <NewsDashboard
+               initialData={dashboardData}
+               locale={locale}
+               isHomePage={false}
+            />
+         </section>
       </main>
    );
 }

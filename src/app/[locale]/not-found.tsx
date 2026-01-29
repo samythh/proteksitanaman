@@ -1,31 +1,23 @@
 // File: src/app/[locale]/not-found.tsx
-"use client"; // ✅ Ubah jadi Client Component agar bisa baca params bahasa
+"use client";
 
-import { useParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import ErrorState from "@/components/ui/ErrorState";
 
-const DICTIONARY = {
-   id: {
-      title: "Halaman Tidak Ditemukan",
-      desc: "Sepertinya Anda tersesat. Halaman yang Anda cari mungkin sudah dihapus, dipindahkan, atau tautan yang Anda tuju salah."
-   },
-   en: {
-      title: "Page Not Found",
-      desc: "It looks like you're lost. The page you are looking for might have been removed, renamed, or is temporarily unavailable."
-   }
-};
-
 export default function NotFound() {
-   const params = useParams();
-   const locale = (params?.locale as "id" | "en") || "id";
-   const t = DICTIONARY[locale] || DICTIONARY.id;
+   // 1. Integrasi i18n
+   // Kita panggil namespace "Error" yang sudah kita buat di JSON.
+   // Tidak perlu manual baca params locale, hook ini sudah pintar.
+   const t = useTranslations("Error");
 
    return (
-      <div className="container mx-auto px-4 mt-20">
+      // Container dibuat fleksibel agar ErrorState berada di tengah vertikal
+      <div className="container mx-auto px-4 flex items-center justify-center min-h-[60vh]">
          <ErrorState
             isNotFound={true}
-            title={t.title}      // ✅ Teks Dinamis
-            description={t.desc} // ✅ Teks Dinamis
+            // Ambil teks dari messages/id.json
+            title={t("not_found_title")}
+            description={t("not_found_desc")}
          />
       </div>
    );

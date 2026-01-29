@@ -3,7 +3,7 @@
 
 import React, { useCallback, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
 import { useParams } from "next/navigation";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, EffectFade, Navigation, Pagination } from "swiper/modules";
@@ -49,45 +49,31 @@ interface NewsHeroSliderProps {
 export default function NewsHeroSlider({ articles = [] }: NewsHeroSliderProps) {
   const params = useParams();
   const locale = (params?.locale as string) || "id";
-
   const [swiperRef, setSwiperRef] = useState<SwiperType | null>(null);
 
-  const handlePrev = useCallback(() => {
-    if (!swiperRef) return;
-    swiperRef.slidePrev();
-  }, [swiperRef]);
-
-  const handleNext = useCallback(() => {
-    if (!swiperRef) return;
-    swiperRef.slideNext();
-  }, [swiperRef]);
+  const handlePrev = useCallback(() => swiperRef?.slidePrev(), [swiperRef]);
+  const handleNext = useCallback(() => swiperRef?.slideNext(), [swiperRef]);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "";
     return new Date(dateString).toLocaleDateString(locale === "en" ? "en-US" : "id-ID", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
+      day: "numeric", month: "long", year: "numeric",
     });
   };
 
   const limitWords = (text: string | undefined, limit: number) => {
     if (!text) return "";
     const words = text.split(" ");
-    if (words.length > limit) {
-      return words.slice(0, limit).join(" ") + "...";
-    }
-    return text;
+    return words.length > limit ? words.slice(0, limit).join(" ") + "..." : text;
   };
 
   if (!articles || articles.length === 0) return null;
 
   return (
-    // PERBAIKAN: Menambahkan '-mt-6 md:-mt-8' untuk menarik komponen ke atas
-    <section className="container mx-auto px-4 -mt-6 md:-mt-8 relative z-10">
+    <section className="container mx-auto px-4 -mt-6 md:-mt-8 relative z-10 mb-12">
 
-      {/* Container Box: Tinggi disesuaikan agar compact */}
-      <div className="relative group rounded-2xl overflow-hidden shadow-xl bg-gray-900 h-[450px] md:h-[380px]">
+      {/* Container Box */}
+      <div className="relative group rounded-3xl overflow-hidden shadow-2xl bg-gray-900 h-[450px] md:h-[400px]">
 
         <Swiper
           modules={[Autoplay, EffectFade, Navigation, Pagination]}
@@ -96,10 +82,7 @@ export default function NewsHeroSlider({ articles = [] }: NewsHeroSliderProps) {
           speed={1000}
           loop={true}
           autoplay={{ delay: 6000, disableOnInteraction: false }}
-          pagination={{
-            clickable: true,
-            el: '.hero-pagination-custom',
-          }}
+          pagination={{ clickable: true, el: '.hero-pagination-custom' }}
           className="w-full h-full"
         >
           {articles.map((item) => {
@@ -112,32 +95,31 @@ export default function NewsHeroSlider({ articles = [] }: NewsHeroSliderProps) {
             return (
               <SwiperSlide key={item.id} className="relative w-full h-full">
 
-                {/* BACKGROUND LAYER */}
+                {/* --- BACKGROUND LAYER --- */}
                 <div className="absolute inset-0 z-0">
                   {imageUrl ? (
                     <Image
                       src={imageUrl}
                       alt={item.title}
                       fill
-                      className="object-cover opacity-60 md:opacity-50 blur-[2px] scale-105"
+                      className="object-cover opacity-60 md:opacity-50 blur-[3px] scale-105"
                       priority
                     />
                   ) : (
                     <div className="w-full h-full bg-gray-800" />
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent md:hidden" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent" />
                 </div>
 
-                {/* KONTEN LAYER */}
+                {/* --- CONTENT LAYER --- */}
                 <div className="absolute inset-0 z-10 flex items-center px-6 md:px-12 lg:px-16">
                   <div className="grid grid-cols-12 w-full gap-6 items-center">
 
-                    {/* KOLOM KIRI (TEKS) */}
-                    <div className="col-span-12 md:col-span-7 lg:col-span-8 flex flex-col justify-center space-y-3">
+                    {/* KOLOM KIRI: TEKS UTAMA */}
+                    <div className="col-span-12 md:col-span-7 lg:col-span-8 flex flex-col justify-center space-y-4">
 
-                      {/* Meta Data */}
-                      <div className="flex items-center gap-3">
+                      {/* Meta Badge */}
+                      <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-4 duration-700">
                         {item.category && (
                           <span
                             className={`px-3 py-1 rounded-md text-[10px] md:text-xs font-bold uppercase tracking-wider shadow-sm ${badgeTextColor}`}
@@ -146,47 +128,54 @@ export default function NewsHeroSlider({ articles = [] }: NewsHeroSliderProps) {
                             {item.category.name}
                           </span>
                         )}
-                        <div className="flex items-center gap-1.5 text-gray-300 text-[10px] md:text-xs font-medium">
-                          <Calendar className="w-3 h-3 text-yellow-500" />
+                        <div className="flex items-center gap-1.5 text-gray-300 text-xs font-medium bg-black/30 px-2 py-1 rounded-md backdrop-blur-sm border border-white/10">
+                          <Calendar className="w-3 h-3 text-yellow-400" />
                           {formatDate(item.publishedAt)}
                         </div>
                       </div>
 
-                      {/* Judul */}
-                      <Link href={`/${locale}/informasi/berita/${item.slug}`} className="group/title block">
-                        <h2 className="text-xl md:text-3xl lg:text-4xl font-bold text-white leading-tight group-hover/title:text-yellow-400 transition-colors drop-shadow-lg">
-                          {limitWords(item.title, 10)}
+                      {/* Judul Artikel */}
+                      <Link href={`/informasi/berita/${item.slug}`} className="group/title block">
+                        <h2 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-white leading-tight group-hover/title:text-yellow-400 transition-colors drop-shadow-lg line-clamp-3">
+                          {limitWords(item.title, 12)}
                         </h2>
                       </Link>
 
                       {/* Excerpt */}
                       {item.excerpt && (
-                        <p className="text-gray-300 text-xs md:text-sm max-w-xl hidden sm:block leading-relaxed line-clamp-2">
-                          {limitWords(item.excerpt, 15)}
+                        <p className="text-gray-300 text-sm md:text-base max-w-xl hidden sm:block leading-relaxed line-clamp-2">
+                          {limitWords(item.excerpt, 20)}
                         </p>
                       )}
 
-                      {/* Tombol */}
-                      <div className="pt-1">
+                      {/* Tombol Baca */}
+                      <div className="pt-2 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-100">
                         <Link
-                          href={`/${locale}/informasi/berita/${item.slug}`}
-                          className="inline-flex items-center gap-2 bg-white text-[#005320] px-5 py-2 rounded-lg font-bold hover:bg-yellow-400 transition-all text-xs md:text-sm shadow-lg transform hover:-translate-y-1"
+                          href={`/informasi/berita/${item.slug}`}
+                          className="inline-flex items-center gap-2 bg-white text-[#005320] px-6 py-2.5 rounded-full font-bold hover:bg-yellow-400 hover:text-[#005320] transition-all text-sm shadow-lg transform hover:-translate-y-1 active:scale-95"
                         >
-                          Baca Artikel
-                          <ArrowUpRight className="w-3.5 h-3.5" />
+                          {locale === 'en' ? 'Read Article' : 'Baca Artikel'}
+                          <ArrowUpRight className="w-4 h-4" />
                         </Link>
                       </div>
                     </div>
 
-                    {/* KOLOM KANAN (GAMBAR POPOUT) */}
-                    <div className="col-span-12 md:col-span-5 lg:col-span-4 hidden md:flex justify-end relative pr-4">
+                    {/* KOLOM KANAN: GAMBAR POPOUT (Desktop Only) */}
+                    <div className="col-span-12 md:col-span-5 lg:col-span-4 hidden md:flex justify-end relative pr-6">
                       {imageUrl && (
-                        <div className="relative w-[280px] h-[180px] lg:w-[320px] lg:h-[200px] rounded-xl overflow-hidden shadow-[0_15px_30px_rgba(0,0,0,0.5)] border-2 border-white/10 group-hover:scale-105 transition-transform duration-700 rotate-2 bg-black">
-                          <Image src={imageUrl} alt={item.title} fill className="object-cover" />
+                        <div className="relative w-[280px] h-[180px] lg:w-[340px] lg:h-[220px] rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border-4 border-white/10 group-hover:scale-105 transition-transform duration-1000 rotate-3 hover:rotate-0 bg-black animate-in zoom-in-50">
+                          <Image
+                            src={imageUrl}
+                            alt={item.title}
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 768px) 100vw, 33vw"
+                          />
                           <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                         </div>
                       )}
                     </div>
+
                   </div>
                 </div>
               </SwiperSlide>
@@ -194,27 +183,29 @@ export default function NewsHeroSlider({ articles = [] }: NewsHeroSliderProps) {
           })}
         </Swiper>
 
-        {/* NAVIGATION BUTTONS */}
+        {/* --- CONTROLS --- */}
         <button
           onClick={handlePrev}
-          className="absolute left-3 top-1/2 -translate-y-1/2 z-20 bg-black/40 hover:bg-[#005320] text-white p-2.5 rounded-full backdrop-blur-md border border-white/10 shadow-lg transition-all opacity-0 group-hover:opacity-100 -translate-x-4 group-hover:translate-x-0 cursor-pointer"
+          className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-black/20 hover:bg-[#005320] text-white p-3 rounded-full backdrop-blur-md border border-white/10 shadow-lg transition-all opacity-0 group-hover:opacity-100 -translate-x-4 group-hover:translate-x-0 duration-300"
+          aria-label="Previous Slide"
         >
-          <ChevronLeft className="w-5 h-5" />
+          <ChevronLeft className="w-6 h-6" />
         </button>
 
         <button
           onClick={handleNext}
-          className="absolute right-3 top-1/2 -translate-y-1/2 z-20 bg-black/40 hover:bg-[#005320] text-white p-2.5 rounded-full backdrop-blur-md border border-white/10 shadow-lg transition-all opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 cursor-pointer"
+          className="absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-black/20 hover:bg-[#005320] text-white p-3 rounded-full backdrop-blur-md border border-white/10 shadow-lg transition-all opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 duration-300"
+          aria-label="Next Slide"
         >
-          <ChevronRight className="w-5 h-5" />
+          <ChevronRight className="w-6 h-6" />
         </button>
 
-        {/* PAGINATION */}
-        <div className="hero-pagination-custom absolute bottom-4 left-0 w-full flex justify-center z-20 gap-2" />
+        {/* --- CUSTOM PAGINATION --- */}
+        <div className="hero-pagination-custom absolute bottom-6 left-0 w-full flex justify-center z-20 gap-2 pointer-events-none" />
 
         <style jsx global>{`
           .hero-pagination-custom .swiper-pagination-bullet {
-            background: rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.3);
             opacity: 1;
             width: 8px;
             height: 8px;
@@ -222,10 +213,11 @@ export default function NewsHeroSlider({ articles = [] }: NewsHeroSliderProps) {
             border-radius: 50%;
             transition: all 0.3s ease;
             cursor: pointer;
+            pointer-events: auto;
           }
           .hero-pagination-custom .swiper-pagination-bullet-active {
             background: #facc15; 
-            width: 24px;
+            width: 32px;
             border-radius: 999px;
           }
         `}</style>

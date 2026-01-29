@@ -1,5 +1,6 @@
 // File: src/components/ui/footer.tsx
 import Image from "next/image";
+import { getTranslations } from "next-intl/server"; 
 import {
    Mail,
    Phone,
@@ -12,97 +13,54 @@ import {
    Globe,
    Video
 } from "lucide-react";
-import { fetchAPI } from "@/lib/strapi/fetcher";
-import { getStrapiMedia } from "@/lib/strapi/utils";
 
-// --- 1. DEFINISI TIPE DATA ---
+import { fetchAPI } from "@/lib/strapi/fetcher"; 
+import { getStrapiMedia } from "@/lib/strapi/utils"; 
+import { StrapiEntity, StrapiImage } from "@/types/shared"; 
+import { StrapiSingleResponse } from "@/types/strapi"; 
 
-// Tipe data untuk item sosmed dinamis
+// --- 1. TYPE DEFINITIONS (LOGIC BARU) ---
+
 interface SocialLinkItem {
    id: number;
    platform: "Instagram" | "Youtube" | "Facebook" | "Twitter" | "Tiktok" | "Linkedin" | "Website";
    url: string;
 }
 
-interface FooterAttributes {
+interface PartnerItem {
+   id: number;
+   image: StrapiImage;
+}
+
+interface FooterAttributes extends StrapiEntity {
    address: string;
    email: string;
    phone: string;
-   // Field baru: social_links (Repeatable Component)
    social_links: SocialLinkItem[];
    mapEmbedUrl: string;
    copyright: string;
-   background?: {
-      url: string;
-   };
-   partners?: {
-      id: number;
-      image: {
-         url: string;
-         width: number;
-         height: number;
-         alternativeText?: string;
-      };
-   }[];
+   background?: StrapiImage;
+   partners?: PartnerItem[];
 }
 
-// --- KAMUS BAHASA UNTUK TEKS STATIS ---
-const FOOTER_TRANSLATIONS = {
-   id: {
-      address: "ALAMAT KAMI",
-      contact: "KONTAK & SOSMED",
-      location: "LOKASI KAMI",
-      no_map: "URL Peta belum diatur"
-   },
-   en: {
-      address: "OUR ADDRESS",
-      contact: "CONTACT & SOCIALS",
-      location: "OUR LOCATION",
-      no_map: "Map URL not set"
-   }
-};
+// --- 2. HELPERS ---
 
-// --- HELPER: ICON MAPPER ---
-// Fungsi untuk memilih icon berdasarkan value dropdown Strapi
 const getSocialIcon = (platform: string) => {
-   // Ubah ke lowercase agar tidak sensitif huruf besar/kecil
    const p = platform.toLowerCase();
+   // ✅ Desain Lama: Ukuran w-6 h-6
+   const className = "w-6 h-6";
 
    switch (p) {
-      case 'instagram': return <Instagram className="w-6 h-6" />;
-      case 'youtube': return <Youtube className="w-6 h-6" />;
-      case 'facebook': return <Facebook className="w-6 h-6" />;
-      case 'twitter': return <Twitter className="w-6 h-6" />;
-      case 'linkedin': return <Linkedin className="w-6 h-6" />;
-      case 'tiktok': return <Video className="w-6 h-6" />; // Lucide tidak punya icon Tiktok spesifik, pakai Video atau import icon luar
-      case 'website': return <Globe className="w-6 h-6" />;
-      default: return <Globe className="w-6 h-6" />; // Default icon
+      case 'instagram': return <Instagram className={className} />;
+      case 'youtube': return <Youtube className={className} />;
+      case 'facebook': return <Facebook className={className} />;
+      case 'twitter': return <Twitter className={className} />;
+      case 'linkedin': return <Linkedin className={className} />;
+      case 'tiktok': return <Video className={className} />;
+      case 'website': return <Globe className={className} />;
+      default: return <Globe className={className} />;
    }
 };
-
-// --- 2. LOGIKA FETCHER ---
-async function getFooterData(locale: string) {
-   try {
-      const path = "/footer";
-      const urlParamsObject = {
-         locale: locale,
-         populate: {
-            background: true,
-            // Populate field social_links yang baru dibuat
-            social_links: true,
-            partners: {
-               populate: { image: true }
-            }
-         },
-      };
-
-      const response = await fetchAPI(path, urlParamsObject);
-      return response.data as FooterAttributes;
-   } catch (error) {
-      console.error("Gagal load Footer:", error);
-      return null;
-   }
-}
 
 function extractSrcFromIframe(htmlString: string | undefined): string {
    if (!htmlString) return "";
@@ -111,27 +69,51 @@ function extractSrcFromIframe(htmlString: string | undefined): string {
    return match ? match[1] : "";
 }
 
-// --- 3. KOMPONEN VISUAL ---
+// --- 3. DATA FETCHER (LOGIC BARU) ---
+
+async function getFooterData(locale: string): Promise<FooterAttributes | null> {
+   try {
+      const path = "/footer";
+      const urlParams = {
+         locale,
+         populate: {
+            background: true,
+            social_links: true,
+            partners: {
+               populate: { image: true }
+            }
+         },
+      };
+
+      const res = await fetchAPI<StrapiSingleResponse<FooterAttributes>>(path, urlParams);
+      return res.data || null;
+   } catch (error) {
+      console.error("❌ [Footer] Gagal mengambil data:", error);
+      return null;
+   }
+}
+
+// --- 4. COMPONENT (DESAIN LAMA) ---
+
 interface FooterProps {
    locale: string;
 }
 
 export default async function Footer({ locale }: FooterProps) {
-   const data = await getFooterData(locale);
+   const [data, t] = await Promise.all([
+      getFooterData(locale),
+      getTranslations({ locale, namespace: "Footer" })
+   ]);
 
-   // Pilih teks berdasarkan locale, fallback ke 'id' jika tidak ada
-   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-   const t = (FOOTER_TRANSLATIONS as any)[locale] || FOOTER_TRANSLATIONS.id;
-
+   // Fallback Data
    const footer = {
       address: data?.address || "Alamat belum diatur.",
       email: data?.email || "email@unand.ac.id",
       phone: data?.phone || "-",
-      // Ambil array social_links, default array kosong jika null
       socialLinks: data?.social_links || [],
       mapUrl: extractSrcFromIframe(data?.mapEmbedUrl),
       copyright: data?.copyright || `© ${new Date().getFullYear()} Departemen Proteksi Tanaman`,
-      bgUrl: getStrapiMedia(data?.background?.url || null),
+      bgUrl: getStrapiMedia(data?.background?.url),
       partners: data?.partners || []
    };
 
@@ -142,12 +124,11 @@ export default async function Footer({ locale }: FooterProps) {
          <div className="container mx-auto px-6 md:px-12 lg:px-24 mb-10">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
 
-               {/* KOLOM 1: Alamat & Identitas Institusi */}
+               {/* KOLOM 1: Alamat & Identitas */}
                <div className="space-y-6 text-center md:text-left">
                   <div>
-                     {/* JUDUL DINAMIS BERDASARKAN BAHASA */}
                      <h3 className="font-bold text-lg mb-4 text-white uppercase tracking-wider border-b border-white/20 pb-2 inline-block md:block">
-                        {t.address}
+                        {t("address_title")}
                      </h3>
 
                      <div className="flex flex-col md:flex-row items-center md:items-start gap-3 text-sm text-gray-100 leading-relaxed font-medium">
@@ -156,12 +137,12 @@ export default async function Footer({ locale }: FooterProps) {
                      </div>
                   </div>
 
-                  {/* Area Logo Partner */}
+                  {/* Area Logo Partner  */}
                   {footer.partners.length > 0 && (
                      <div className="pt-2">
                         <div className="flex flex-col items-center md:items-start gap-4">
                            {footer.partners.map((partner) => {
-                              const imgUrl = getStrapiMedia(partner.image?.url || null);
+                              const imgUrl = getStrapiMedia(partner.image?.url);
                               if (!imgUrl) return null;
                               return (
                                  <div key={partner.id} className="w-fit">
@@ -184,12 +165,11 @@ export default async function Footer({ locale }: FooterProps) {
                {/* KOLOM 2: Sosmed & Kontak (CENTER) */}
                <div className="flex flex-col space-y-8 items-center text-center">
                   <div className="w-full">
-                     {/* JUDUL DINAMIS */}
                      <h3 className="font-bold text-lg mb-4 text-white uppercase tracking-wider border-b border-white/20 pb-2 inline-block">
-                        {t.contact}
+                        {t("contact_title")}
                      </h3>
 
-                     {/* Social Media Buttons - LOOPING DINAMIS */}
+                     {/* Social Media Buttons */}
                      {footer.socialLinks.length > 0 ? (
                         <div className="flex justify-center gap-4 mb-6 flex-wrap">
                            {footer.socialLinks.map((item) => (
@@ -202,16 +182,15 @@ export default async function Footer({ locale }: FooterProps) {
                                  aria-label={item.platform}
                                  title={item.platform}
                               >
-                                 {/* Render Icon Sesuai Platform */}
                                  {getSocialIcon(item.platform)}
                               </a>
                            ))}
                         </div>
                      ) : (
-                        <p className="text-xs text-gray-300 mb-6">Sosmed belum ditambahkan</p>
+                        <p className="text-xs text-gray-300 mb-6">{t("no_social")}</p>
                      )}
 
-                     {/* Contact Info */}
+                     {/* Contact Info*/}
                      <ul className="space-y-4 text-sm flex flex-col items-center">
                         <li className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-full">
                            <Mail className="w-4 h-4 text-yellow-400 shrink-0" />
@@ -229,9 +208,8 @@ export default async function Footer({ locale }: FooterProps) {
 
                {/* KOLOM 3: Peta */}
                <div className="flex flex-col items-center md:items-end text-center md:text-right">
-                  {/* JUDUL DINAMIS */}
                   <h3 className="font-bold text-lg mb-4 text-white uppercase tracking-wider border-b border-white/20 pb-2 inline-block md:block">
-                     {t.location}
+                     {t("location_title")}
                   </h3>
 
                   <div className="w-full max-w-[280px] h-56 bg-gray-200 rounded-lg overflow-hidden shadow-lg border-2 border-white/20 relative group">
@@ -248,7 +226,7 @@ export default async function Footer({ locale }: FooterProps) {
                         ></iframe>
                      ) : (
                         <div className="flex items-center justify-center h-full bg-gray-800 text-gray-400 text-xs px-4">
-                           {t.no_map}
+                           {t("no_map")}
                         </div>
                      )}
                   </div>
@@ -263,7 +241,7 @@ export default async function Footer({ locale }: FooterProps) {
             </p>
          </div>
 
-         {/* Background Image */}
+         {/* Background Image (Batik Pattern) */}
          {footer.bgUrl && (
             <div className="w-full h-12 relative bg-white z-10">
                <Image

@@ -1,49 +1,54 @@
-// File: src/app/[locale]/[slug]/page.tsx
-
 import { notFound } from "next/navigation";
 import { fetchAPI } from "@/lib/strapi/fetcher";
+import { getStrapiMedia } from "@/lib/strapi/utils";
 import SectionRenderer from "@/components/strapi/section-renderer";
+import { Metadata } from "next";
 
 // --- TYPE IMPORTS ---
 import { NewsItem } from "@/components/sections/NewsDashboard";
 import { Agenda } from "@/types/agenda";
 
 // --- TYPES DEFINITION ---
-interface StrapiImage {
-   url?: string;
-   data?: { attributes?: { url?: string } };
+interface StrapiEntity {
+   id: number;
+   attributes?: Record<string, unknown>;
+   [key: string]: unknown;
 }
 
+interface StrapiResponse<T> {
+   data: T;
+   meta?: Record<string, unknown>;
+}
+
+// Helper Normalisasi
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type StrapiBlock = any;
-
-interface PageData {
-   slug?: string;
-   blocks?: StrapiBlock[];
-   attributes?: {
-      slug?: string;
-      blocks?: StrapiBlock[];
-   };
-   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-   [key: string]: any;
+function getAttributes(item: any) {
+   if (!item) return null;
+   const attrs = item.attributes || item;
+   return { id: item.id, ...attrs };
 }
 
+// --- GENERATE STATIC PARAMS ---
 export async function generateStaticParams() {
    try {
       const pages = await fetchAPI("/pages", {
          fields: ["slug"],
          pagination: { limit: -1 },
-      });
-      const params = [];
+         populate: { localizations: { fields: ["locale"] } }
+      }) as StrapiResponse<StrapiEntity[]>;
+
+      const params: { slug: string; locale: string }[] = [];
       const locales = ["id", "en"];
+
       if (pages?.data) {
-         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-         for (const page of pages.data as any[]) {
-            const slug = page.slug || page.attributes?.slug;
-            for (const locale of locales) {
-               if (slug) params.push({ slug, locale });
+         pages.data.forEach((page) => {
+            const data = getAttributes(page);
+            if (data?.slug) {
+               locales.forEach((locale) => {
+                  params.push({ slug: data.slug, locale });
+               });
             }
-         }
+         });
       }
       return params;
    } catch (error) {
@@ -52,6 +57,32 @@ export async function generateStaticParams() {
    }
 }
 
+// --- GENERATE METADATA ---
+export async function generateMetadata({
+   params,
+}: {
+   params: Promise<{ slug: string; locale: string }>;
+}): Promise<Metadata> {
+   const { slug, locale } = await params;
+
+   const res = await fetchAPI("/pages", {
+      filters: { slug: { $eq: slug } },
+      locale,
+      fields: ["title"],
+   }) as StrapiResponse<StrapiEntity[]>;
+
+   const page = getAttributes(res?.data?.[0]);
+
+   if (!page) return { title: "Page Not Found" };
+
+   return {
+      title: page.title,
+      description: `Halaman ${page.title} Departemen Proteksi Tanaman`,
+   };
+}
+
+
+// --- MAIN PAGE COMPONENT ---
 export default async function DynamicPage({
    params,
 }: {
@@ -59,214 +90,212 @@ export default async function DynamicPage({
 }) {
    const { slug, locale } = await params;
 
-   let pageData: PageData | null = null;
+   // ==========================================
+   // 1. DEFINISI POPULATE
+   // ==========================================
+   const blocksPopulate = {
+      on: {
+         "layout.page-header": { populate: "*" },
+         "sections.rich-text": { populate: "*" },
+         "sections.hero-slider": { populate: { slides: { populate: "*" } } },
+         "sections.visi-misi-section": { populate: { programs: { populate: "*" } } },
 
-   let globalHeroUrl: string | undefined = undefined;
-   let articles: NewsItem[] = [];
-   let latestEvents: Agenda[] = [];
+         "sections.leaders-section": {
+            populate: {
+               groups: {
+                  populate: {
+                     current_leader: { populate: "*" },
+                     past_leaders: { populate: "*" }
+                  }
+               }
+            }
+         },
+
+         "sections.accreditation": {
+            populate: {
+               certificates: {
+                  populate: {
+                     image: { fields: ["url", "alternativeText", "width", "height"] }
+                  }
+               }
+            }
+         },
+
+         "sections.image-section": {
+            populate: { image: { fields: ["url", "alternativeText", "width", "height"] } }
+         },
+
+         "sections.visitor-stats": {
+            populate: { background_pattern: { fields: ["url"] } }
+         },
+
+         "sections.welcome-section": {
+            populate: { profiles: { populate: "*" } }
+         },
+
+         "sections.other-link-section": { populate: { items: { populate: "*" } } },
+         "sections.video-profile": { populate: { slides: { populate: "*" } } },
+         "sections.faq-section": { populate: { items: { populate: "*" } } },
+         "sections.facilities-list-section": { populate: "*" },
+         "sections.video-section": { populate: "*" },
+
+         "sections.feature-list-section": {
+            populate: {
+               image: { fields: ["url"] },
+               items: { populate: { icon: { fields: ["url"] } } }
+            }
+         },
+
+         "sections.profile-grid-section": {
+            populate: {
+               items: { populate: { photo: { fields: ["url", "alternativeText"] } } }
+            }
+         },
+
+         "sections.curriculum-section": {
+            populate: {
+               items: { populate: { courses: { populate: "*" } } }
+            }
+         },
+
+         "sections.gallery-section": {
+            populate: { items: { populate: { image: { fields: ["url"] } } } }
+         },
+
+         "sections.document-section": {
+            populate: {
+               categories: {
+                  populate: {
+                     groups: {
+                        populate: {
+                           files: { populate: { file: { fields: ["url", "name", "ext", "size"] } } }
+                        }
+                     }
+                  }
+               }
+            }
+         },
+
+         "sections.publication-section": {
+            populate: { items: { populate: { image: { fields: ["url"] } } } }
+         },
+      }
+   };
 
    // ==========================================
-   // TAHAP 1: FETCH HALAMAN UTAMA (WAJIB)
+   // 2. PARALLEL DATA FETCHING
    // ==========================================
-   try {
-      const pageRes = await fetchAPI("/pages", {
+
+   const [pageRes, globalRes, newsRes, agendaRes] = await Promise.all([
+      // A. Page Data
+      fetchAPI("/pages", {
          filters: { slug: { $eq: slug } },
          locale: locale,
          populate: {
-            blocks: {
-               on: {
-                  // --- 1. LAYOUT & TEXT ---
-                  "layout.page-header": { populate: "*" },
-                  "sections.rich-text": { populate: "*" },
-
-                  // --- 2. EXISTING SECTIONS ---
-                  "sections.visi-misi-section": {
-                     populate: { programs: { populate: "*" } }
-                  },
-                  "sections.leaders-section": {
-                     populate: {
-                        groups: {
-                           populate: {
-                              current_leader: { populate: "*" },
-                              past_leaders: { populate: "*" }
-                           }
-                        }
-                     }
-                  },
-
-                  // --- 3. NEW COMPONENTS ---
-
-                  // A. Fasilitas List
-                  "sections.facilities-list-section": { populate: "*" },
-
-                  // B. Image Section
-                  "sections.image-section": {
-                     populate: {
-                        image: { fields: ["url", "alternativeText", "width", "height"] }
-                     }
-                  },
-
-                  // C. Video Section
-                  "sections.video-section": { populate: "*" },
-
-                  // D. Feature List Section (Capaian Lulusan)
-                  "sections.feature-list-section": {
-                     populate: {
-                        image: { fields: ["url", "alternativeText", "width", "height"] },
-                        items: {
-                           populate: {
-                              icon: { fields: ["url", "alternativeText"] }
-                           }
-                        }
-                     }
-                  },
-
-                  // E. Profile Grid Section (Profil Lulusan / Tim)
-                  "sections.profile-grid-section": {
-                     populate: {
-                        items: {
-                           populate: {
-                              photo: { fields: ["url", "alternativeText", "width", "height"] }
-                           }
-                        }
-                     }
-                  },
-
-                  // F. Curriculum Section (Mata Kuliah Accordion)
-                  "sections.curriculum-section": {
-                     populate: {
-                        items: { // Masuk ke SemesterGroup
-                           populate: {
-                              courses: { // Masuk ke CourseItem
-                                 populate: "*"
-                              }
-                           }
-                        }
-                     }
-                  },
-
-                  // G. Gallery Section (Galeri Foto)
-                  "sections.gallery-section": {
-                     populate: {
-                        items: {
-                           populate: {
-                              image: { fields: ["url", "alternativeText", "width", "height"] }
-                           }
-                        }
-                     }
-                  },
-
-                  // H. Document Section (Dokumen & SOP)
-                  "sections.document-section": {
-                     populate: {
-                        categories: {
-                           populate: {
-                              groups: {
-                                 populate: {
-                                    files: {
-                                       populate: {
-                                          // Ambil URL file, nama, ekstensi, dan ukuran
-                                          file: { fields: ["url", "name", "ext", "size"] }
-                                       }
-                                    }
-                                 }
-                              }
-                           }
-                        }
-                     }
-                  },
-
-                  // I. Publication Section (Publikasi Ilmiah) ✅ NEW ADDITION
-                  "sections.publication-section": {
-                     populate: {
-                        items: {
-                           populate: {
-                              image: { fields: ["url", "alternativeText", "width", "height"] }
-                           }
-                        }
-                     }
-                  },
-
-                  // J. Agenda Preview
-                  "sections.agenda-preview": { populate: "*" },
-
-                  // --- 4. OTHER OPTIONAL SECTIONS ---
-                  "sections.accreditation": { populate: { certificates: { populate: "*" } } },
-                  "sections.stats": { populate: { items: { populate: "*" } } },
-                  "sections.welcome-section": { populate: { profiles: { populate: "*" } } },
-                  "sections.video-profile": { populate: { slides: { populate: "*" } } },
-                  "sections.other-link-section": { populate: { items: { populate: "*" } } },
-                  "sections.faq-section": { populate: { items: { populate: "*" } } },
-                  "sections.partnership": { populate: { items: { populate: "*" } } },
-                  "sections.hero-slider": { populate: { slides: { populate: "*" } } },
-                  "sections.news-section": { populate: "*" },
-                  "sections.visitor-stats": { populate: { background_pattern: { fields: ["url"] } } },
-               },
-            },
+            blocks: blocksPopulate,
          },
-      });
+      }) as Promise<StrapiResponse<StrapiEntity[]>>,
 
-      if (!pageRes.data || pageRes.data.length === 0) {
-         console.error(`[DynamicPage] Page not found for slug: ${slug}`);
-         return notFound();
-      }
+      // B. Global Data
+      fetchAPI("/global", {
+         populate: "Default_Hero_Image",
+         locale: locale,
+      }).catch(() => null) as Promise<StrapiResponse<StrapiEntity> | null>,
 
-      const rawPage = pageRes.data[0];
-      pageData = rawPage.attributes ? rawPage.attributes : rawPage;
+      // C. News Data
+      fetchAPI("/articles", {
+         locale: locale,
+         sort: ["publishedAt:desc"],
+         pagination: { limit: 6 },
+         populate: {
+            cover: { fields: ["url"] },
+            category: { fields: ["name", "color"] }
+         },
+      }).catch(() => ({ data: [] })) as Promise<StrapiResponse<StrapiEntity[]>>,
 
-   } catch (error) {
-      console.error("[DynamicPage] CRITICAL ERROR fetching Page:", error);
+      // D. Agenda Data
+      fetchAPI("/events", {
+         locale: locale,
+         sort: ["startDate:asc"],
+         filters: { endDate: { $gte: new Date().toISOString() } },
+         pagination: { limit: 5 },
+         populate: {
+            image: { fields: ["url", "alternativeText"] },
+            tags: { populate: "*" }
+         },
+      }).catch((err) => {
+         console.warn("Agenda fetch failed (check endpoint name):", err);
+         return { data: [] };
+      }) as Promise<StrapiResponse<Agenda[]>>,
+   ]);
+
+   // ==========================================
+   // 3. VALIDASI & NORMALISASI
+   // ==========================================
+
+   const pageData = getAttributes(pageRes?.data?.[0]);
+
+   if (!pageData) {
       return notFound();
    }
 
-   // ==========================================
-   // TAHAP 2: FETCH DATA PENDUKUNG (OPSIONAL)
-   // ==========================================
-   try {
-      const [globalRes, newsRes, eventRes] = await Promise.all([
-         fetchAPI("/global", {
-            populate: "Default_Hero_Image",
-            locale: locale,
-         }).catch(() => null),
+   const blocks = pageData.blocks || [];
 
-         fetchAPI("/articles", {
-            locale: locale,
-            pagination: { limit: 5 },
-            populate: { cover: { fields: ["url"] }, category: { fields: ["name", "color"] } },
-         }).catch(() => ({ data: [] })),
+   const globalData = getAttributes(globalRes?.data);
+   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   const globalHeroRaw = globalData?.Default_Hero_Image as any;
+   const globalHeroUrl = getStrapiMedia(
+      globalHeroRaw?.url || globalHeroRaw?.data?.attributes?.url || globalHeroRaw?.attributes?.url
+   );
 
-         fetchAPI("/events", {
-            locale: locale,
-            pagination: { limit: 4 },
-            populate: { image: { fields: ["url"] }, tags: { populate: "*" } },
-         }).catch(() => ({ data: [] })),
-      ]);
+   const rawArticles = newsRes?.data || [];
 
-      const globalImg = globalRes?.data?.Default_Hero_Image as StrapiImage | undefined;
-      globalHeroUrl = globalImg?.url || globalImg?.data?.attributes?.url;
-      articles = newsRes?.data || [];
-      latestEvents = eventRes?.data || [];
+   const articles: NewsItem[] = rawArticles.map((item) => {
+      const data = getAttributes(item);
+      if (!data) return null;
 
-   } catch (error) {
-      console.warn("Non-critical data fetch failed:", error);
-   }
+      const imageData = data.cover || data.image;
 
-   // ==========================================
-   // RENDER HALAMAN
-   // ==========================================
-   const sections = pageData?.blocks || pageData?.attributes?.blocks || [];
+      return {
+         id: Number(data.id),
+         title: data.title as string,
+         slug: data.slug as string,
+         publishedAt: data.publishedAt as string,
+         excerpt: (data.description as string) || "Klik untuk membaca selengkapnya...",
+         image: imageData,
+         cover: imageData,
+         // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         category: data.category as any
+      };
+   }).filter(Boolean) as NewsItem[];
+
+   // Normalisasi Agenda
+   const rawAgendas = agendaRes?.data || [];
+   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   const latestEvents = rawAgendas.map((item: any) => {
+      const data = getAttributes(item);
+      return {
+         ...data,
+         endDate: data.endDate || data.startDate || "",
+         image: data.image || null,
+         tags: data.tags || []
+      };
+   });
 
    const globalDataForRenderer = {
-      locale: locale,
-      globalHeroUrl: globalHeroUrl,
-      articles: articles,
-      latestEvents: latestEvents
+      locale,
+      globalHeroUrl: globalHeroUrl || undefined,
+      articles,
+      latestEvents
    };
 
+   // ==========================================
+   // 4. RENDER
+   // ==========================================
    return (
-      <div className="w-full bg-white pb-20 -mt-14 md:-mt-16 relative z-10">
+      <div className="w-full bg-white pb-20 -mt-14 md:-mt-16 relative z-10 min-h-screen">
          <SectionRenderer
-            sections={sections}
+            sections={blocks}
             globalData={globalDataForRenderer}
          />
       </div>

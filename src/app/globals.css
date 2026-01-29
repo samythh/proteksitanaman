@@ -8,56 +8,46 @@
 /* 2. Mendefinisikan Variabel CSS (Tema Website) */
 @layer base {
   :root {
-    /* --- BACKGROUND & FOREGROUND (Dasar) --- */
-    /* Putih bersih untuk latar belakang */
+    /* --- BACKGROUND & FOREGROUND --- */
     --background: 0 0% 100%;
-    /* Hitam hampir pekat untuk teks agar mudah dibaca */
     --foreground: 240 10% 3.9%;
 
-    /* --- PRIMARY COLOR (Identitas Departemen) --- */
-    /* Warna Hijau Daun (Plant Protection Green) */
-    /* Format HSL: Hue Saturation Lightness */
+    /* --- PRIMARY COLOR (Hijau Departemen) --- */
+    /* HSL: 142.1 76.2% 36.3% = #16A34A (Green-600) */
     --primary: 142.1 76.2% 36.3%;
     --primary-foreground: 355.7 100% 97.3%;
-    /* Teks putih di atas hijau */
 
-    /* --- SECONDARY COLOR (Elemen Pendukung) --- */
-    /* Abu-abu sangat muda untuk background section selingan */
+    /* --- SECONDARY COLOR --- */
     --secondary: 240 4.8% 95.9%;
     --secondary-foreground: 240 5.9% 10%;
 
-    /* --- UI ELEMENTS (Kartu, Popover, Dialog) --- */
+    /* --- UI ELEMENTS --- */
     --card: 0 0% 100%;
     --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
 
-    /* --- MUTED (Teks kurang penting/Caption) --- */
+    /* --- MUTED --- */
     --muted: 240 4.8% 95.9%;
     --muted-foreground: 240 3.8% 46.1%;
 
-    /* --- ACCENT (Hover states) --- */
+    /* --- ACCENT --- */
     --accent: 240 4.8% 95.9%;
     --accent-foreground: 240 5.9% 10%;
 
-    /* --- DESTRUCTIVE (Tombol Hapus/Error) --- */
+    /* --- DESTRUCTIVE --- */
     --destructive: 0 84.2% 60.2%;
-    /* Merah */
     --destructive-foreground: 0 0% 98%;
 
     /* --- BORDERS & INPUTS --- */
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
+    --ring: 142.1 76.2% 36.3%; /* Fokus warna hijau */
 
-    /* Ring fokus saat user klik input (Warna Hijau Primary) */
-    --ring: 142.1 76.2% 36.3%;
-
-    /* Kebulatan sudut (Border Radius) */
     --radius: 0.5rem;
-    /* Setara 8px */
   }
 
-  /* Mode Gelap (Opsional, disiapkan jika nanti butuh) */
+  /* Mode Gelap (Persiapan) */
   .dark {
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
@@ -66,7 +56,6 @@
     --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
     --primary: 142.1 70.6% 45.3%;
-    /* Hijau lebih terang agar kontras di mode gelap */
     --primary-foreground: 144.9 80.4% 10%;
     --secondary: 240 3.7% 15.9%;
     --secondary-foreground: 0 0% 98%;
@@ -82,35 +71,59 @@
   }
 }
 
-/* 3. Menerapkan variabel ke elemen dasar HTML */
+/* 3. Menerapkan gaya dasar */
 @layer base {
   * {
-    /* Menerapkan warna border default ke semua elemen */
     @apply border-border;
   }
-
+  
   body {
-    /* Menerapkan warna background dan text default */
     @apply bg-background text-foreground;
   }
 
-    html.lenis, html.lenis body {
-    height: auto;
+  /* --- TAMBAHAN: Selection Color (Warna saat teks di-blok) --- */
+  ::selection {
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
   }
 
-  .lenis.lenis-smooth {
-    scroll-behavior: auto !important; /* Matikan smooth scroll bawaan browser agar Lenis yang ambil alih */
+  /* --- TAMBAHAN: Custom Scrollbar (Webkit browsers: Chrome, Safari, Edge) --- */
+  ::-webkit-scrollbar {
+    width: 10px;
   }
 
-  .lenis.lenis-smooth [data-lenis-prevent] {
-    overscroll-behavior: contain;
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--secondary));
   }
 
-  .lenis.lenis-stopped {
-    overflow: hidden;
+  ::-webkit-scrollbar-thumb {
+    background: #a3c2a3; /* Hijau muda pudar */
+    border-radius: 5px;
   }
 
-  .lenis.lenis-scrolling iframe {
-    pointer-events: none;
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary)); /* Hijau utama saat hover */
   }
+}
+
+/* 4. LENIS SMOOTH SCROLL CSS  */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important; /* Mencegah konflik dengan scroll-behavior: smooth native */
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis.lenis-scrolling iframe {
+  pointer-events: none;
 }

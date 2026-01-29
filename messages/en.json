@@ -13,11 +13,33 @@
       "profile": "Profile",
       "academic": "Academic",
       "facility": "Facility",
-      "contact": "Contact"
+      "contact": "Contact",
+      "menu_title": "Menu",
+      "open_page": "Open Page",
+      "close_menu": "Close Menu",
+      "switch_id": "Indonesia",
+      "switch_en": "English"
    },
    "News": {
       "read_more": "Read More",
       "no_news": "No news available"
+   },
+   "NewsDashboard": {
+      "latest_news": "Latest News",
+      "view_all": "View All News",
+      "read_more": "Read More",
+      "loading": "Loading...",
+      "load_more": "Load More News",
+      "no_data": "No news found.",
+      "end_list": "You have reached the end.",
+      "sort_newest": "Newest",
+      "sort_oldest": "Oldest",
+      "search_placeholder": "Search..."
+   },
+   "NewsPage": {
+      "meta_title": "News & Articles",
+      "hero_sr_title": "Latest News and Articles",
+      "no_news_display": "No news to display at the moment."
    },
    "FacilitiesPage": {
       "title": "Department Facilities",
@@ -26,5 +48,163 @@
       "breadcrumb_facilities": "Facilities",
       "section_title": "Facilities & Infrastructure",
       "section_subtitle": "Academic Support"
+   },
+   "FacilitiesList": {
+      "featured_badge": "Featured Facility",
+      "explore_btn": "Explore Details",
+      "load_more": "Load More",
+      "end_list": "You have reached the end of the list",
+      "no_media": "No image available",
+      "video_play": "Play Video",
+      "more_images": "More Images"
+   },
+   "FacilityDetail": {
+      "gallery_title": "Photo Gallery",
+      "other_facilities": "Other Facilities",
+      "back_to_list": "Back to Facilities List",
+      "video_preview": "Video Preview",
+      "no_image": "No image available"
+   },
+   "AgendaPage": {
+      "title_ongoing": "Ongoing Events",
+      "title_upcoming": "Upcoming Events",
+      "title_past": "Past Events",
+      "no_upcoming": "No upcoming events scheduled.",
+      "no_past": "No past events found.",
+      "view_all": "View All",
+      "view_archive": "View All Archive"
+   },
+   "AgendaDetail": {
+      "date": "Date",
+      "time": "Time",
+      "location": "Location",
+      "related_events": "Related Events",
+      "view_all": "View All",
+      "view_all_mobile": "View All Events",
+      "back_to_list": "Back to Agenda",
+      "poster_unavailable": "Poster not available",
+      "desc_unavailable": "No detailed description available for this event.",
+      "no_related_events": "No other events found.",
+      "meta_desc_prefix": "Event details for"
+   },
+   "AgendaArchive": {
+      "title": "Agenda Archive",
+      "subtitle": "List of past activities and events",
+      "back_to_agenda": "Back to Upcoming Agenda",
+      "no_archive": "No archived agenda found.",
+      "breadcrumb_home": "Home",
+      "breadcrumb_agenda": "Agenda",
+      "breadcrumb_archive": "Archive"
+   },
+   "AgendaHeroSlider": {
+      "status_upcoming": "Upcoming",
+      "status_finished": "Finished",
+      "status_ongoing": "Ongoing",
+      "read_more": "Read More",
+      "no_image": "No Image",
+      "default_tag": "Agenda"
+   },
+   "AgendaCard": {
+      "status_upcoming": "Upcoming",
+      "status_finished": "Finished",
+      "status_ongoing": "Ongoing",
+      "default_tag": "General",
+      "poster_alt": "Agenda Poster",
+      "label": "Agenda"
+   },
+   "Error": {
+      "retry": "Try Again",
+      "home": "Back to Home",
+      "detail": "Error Detail",
+      "not_found_title": "Page Not Found",
+      "not_found_desc": "Sorry, the page you are looking for does not exist or has been moved.",
+      "server_error_title": "Something Went Wrong",
+      "server_error_desc": "We encountered an issue on our server. Please try again later."
+   },
+   "Footer": {
+      "address_title": "OUR ADDRESS",
+      "contact_title": "CONTACT & SOCIALS",
+      "location_title": "OUR LOCATION",
+      "no_map": "Map not set by admin.",
+      "no_social": "Social media not available.",
+      "default_address": "Address not set.",
+      "copyright_suffix": "Department of Plant Protection. All rights reserved."
+   },
+   "UI": {
+      "zoom_image": "Zoom Image",
+      "close": "Close",
+      "image_modal_label": "Fullscreen image view",
+      "scroll_top": "Scroll to top",
+      "search_placeholder": "Search...",
+      "search_label": "Search",
+      "share_label": "Share this post",
+      "copy_link": "Copy Link",
+      "copied": "Copied!",
+      "share_wa": "Share to WhatsApp",
+      "share_fb": "Share to Facebook",
+      "share_x": "Share to X (Twitter)"
+   },
+   "LeadersSection": {
+      "view_photo": "View Photo",
+      "past_period": "Previous Period"
+   },
+   "StaffList": {
+      "loading_more": "Loading more...",
+      "all_loaded": "All data ({count} Staff) has been displayed"
+   },
+   "StaffCard": {
+      "expertise": "Expertise",
+      "rank": "Rank",
+      "nip": "Employee ID",
+      "no_photo": "No Photo",
+      "view_profile_aria": "View profile of {name}",
+      "banner_alt": "Card Background",
+      "staff_alt": "Staff Member"
+   },
+   "StaffDetail": {
+      "role_academic": "Academic Staff",
+      "role_admin": "Administrative Staff",
+      "education": "Education",
+      "back_to_list": "Back to Staff List",
+      "email_title": "Email",
+      "profile_section_title": "Profile",
+      "breadcrumb_profile": "Profile",
+      "breadcrumb_staff": "Staff",
+      "breadcrumb_detail": "Detail",
+      "nip": "Employee ID",
+      "default_role_academic": "Lecturer",
+      "default_role_admin": "Administrative Staff",
+      "staff_not_found_title": "Staff Not Found",
+      "meta_title_suffix": "Profile",
+      "meta_desc_prefix": "Full profile of"
+   },
+   "ArticleCard": {
+      "default_category": "News",
+      "no_image": "No Image",
+      "read_more": "Read Article"
+   },
+   "SearchPage": {
+      "title": "Search Results",
+      "loading_initial": "Loading search...",
+      "showing_results_for": "Showing results for keyword",
+      "filter_label": "Filter:",
+      "filter_all": "All",
+      "filter_article": "News & Articles",
+      "filter_event": "Agenda",
+      "filter_staff": "Lecturers & Staff",
+      "filter_facility": "Facilities",
+      "filter_page": "Other Pages",
+      "sort_relevance": "Most Relevant",
+      "sort_newest": "Newest",
+      "sort_oldest": "Oldest",
+      "meta_total": "Total Data:",
+      "meta_page": "Page",
+      "loading_results": "Searching data...",
+      "no_title": "Untitled",
+      "empty_title": "Not Found",
+      "empty_desc": "Sorry, we couldn't find any results for \"{query}\" in this category. Try another keyword or change the filter.",
+      "reset_filter": "Reset Filter",
+      "prev_page": "Previous",
+      "next_page": "Next"
    }
 }

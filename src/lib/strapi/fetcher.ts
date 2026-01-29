@@ -1,33 +1,42 @@
 // File: src/lib/strapi/fetcher.ts
 import qs from "qs";
-import { getStrapiURL } from "./utils";
+import { CONFIG } from "@/lib/config";
+import { ZodSchema } from "zod";
 
 interface FetchOptions {
    headers?: Record<string, string>;
    noAuth?: boolean;
    cache?: RequestCache;
    next?: NextFetchRequestConfig;
+   timeout?: number;
 }
 
 type UrlParams = Record<string, unknown>;
 
-export async function fetchAPI(
+class StrapiError extends Error {
+   status: number;
+   payload: unknown;
+
+   constructor(message: string, status: number, payload: unknown) {
+      super(message);
+      this.name = "StrapiError";
+      this.status = status;
+      this.payload = payload;
+   }
+}
+
+export async function fetchAPI<T = unknown>(
    path: string,
    urlParamsObject: UrlParams = {},
-   options: FetchOptions = {}
-) {
+   options: FetchOptions = {},
+   schema?: ZodSchema<T>
+): Promise<T> {
    try {
-      // Cek Token (Debugging)
-      const token = process.env.STRAPI_API_TOKEN;
-      if (!token && !options.noAuth) {
-         console.warn("⚠️ Peringatan: STRAPI_API_TOKEN tidak terbaca di .env!");
-      }
-
-      // 1. Siapkan Headers
+      // 1. Build Headers
       const headers = {
          "Content-Type": "application/json",
-         ...(!options.noAuth && token
-            ? { Authorization: `Bearer ${token}` }
+         ...(!options.noAuth && CONFIG.API_TOKEN
+            ? { Authorization: `Bearer ${CONFIG.API_TOKEN}` }
             : {}),
          ...options.headers,
       };
@@ -35,51 +44,58 @@ export async function fetchAPI(
       // 2. Build Query String
       const queryString = qs.stringify(urlParamsObject, {
          encodeValuesOnly: true,
+         arrayFormat: "indices",
       });
 
-      // 3. Gabungkan URL
-      // Hasilnya akan seperti: http://202.10.34.176:1337/api/homepage?populate=...
-      const requestUrl = `${getStrapiURL(`/api${path}`)}${queryString ? `?${queryString}` : ""
-         }`;
+      // 3. Construct URL
+      const cleanPath = path.startsWith("/") ? path.slice(1) : path;
+      const requestUrl = `${CONFIG.API_BASE_URL}/${cleanPath}${queryString ? `?${queryString}` : ""}`;
 
-      // --- DEBUG LOGGING (PENTING) ---
-      console.log("==========================================");
-      console.log(`📡 Fetching: ${requestUrl}`);
-      // console.log(`🔑 Token Preview: ${token?.substring(0, 10)}...`); // Uncomment jika ingin cek token
-      console.log("==========================================");
-
-      // 4. Lakukan Fetch
+      // 4. Execute Fetch
       const response = await fetch(requestUrl, {
          method: "GET",
          headers,
-         cache: options.cache || "no-store", // Bagus untuk development
+         cache: options.cache || "no-store",
          next: options.next,
       });
 
-      // 5. Handle Error
+      // 5. Handle API Errors (Non-200 responses)
       if (!response.ok) {
-         const errorBody = await response.text();
-         console.error(`❌ Strapi Error [${response.status}]:`, errorBody);
-         throw new Error(
-            `Error Strapi ${response.status}: ${response.statusText} - ${errorBody}`
+         const errorBody = await response.json().catch(() => ({}));
+
+         // Logging Error yang informatif untuk Server Log (Vercel/Cloud)
+         console.error(`[Strapi Fetch Error] ${response.status} | URL: ${requestUrl}`, JSON.stringify(errorBody));
+
+         throw new StrapiError(
+            `Strapi Error: ${response.status} ${response.statusText}`,
+            response.status,
+            errorBody
          );
       }
 
-      // 6. Return JSON
-      const data = await response.json();
+      // 6. Parse JSON
+      const json = await response.json();
 
-      // Cek apakah data kosong dari Strapi
-      if (!data.data) {
-         console.warn("⚠️ Fetch berhasil (200 OK) tapi data dari Strapi 'null' atau kosong.");
-      } else {
-         console.log("✅ Data berhasil diterima!");
+      // 7. Zod Validation
+      if (schema) {
+         const validationResult = schema.safeParse(json);
+
+         if (!validationResult.success) {
+            // Log ini sangat krusial jika skema database Strapi berubah tiba-tiba
+            console.error(`❌ [Zod Validation Failed] Path: ${path}`, validationResult.error.format());
+            throw new Error("Data integrity error: API response does not match schema.");
+         }
+
+         return validationResult.data;
       }
 
-      return data;
+      return json as T;
 
    } catch (error) {
-      console.error(`🔥 FetchAPI Gagal Total pada ${path}:`);
-      console.error(error);
+      if (error instanceof StrapiError) throw error;
+
+      // Log untuk error fatal (Network failure, timeout, etc)
+      console.error(`🔥 [FetchAPI Fatal Error] ${path}:`, error instanceof Error ? error.message : error);
       throw error;
    }
 }

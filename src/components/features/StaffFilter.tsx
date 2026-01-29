@@ -1,3 +1,6 @@
+// File: src/components/features/StaffFilter.tsx
+"use client";
+
 import Link from "next/link";
 
 interface StaffFilterProps {
@@ -5,40 +8,42 @@ interface StaffFilterProps {
   locale: string;
 }
 
+// --- KONFIGURASI MENU ---
+// Memudahkan penambahan menu baru tanpa mengotak-atik JSX
+const FILTER_ITEMS = [
+  { key: "akademik", label: "Staf Akademik" },
+  { key: "administrasi", label: "Staf Administrasi" },
+];
+
 export default function StaffFilter({
   currentCategory,
   locale,
 }: StaffFilterProps) {
-  // Helper styling tombol
-  const getButtonStyle = (category: string) => {
-    const isActive = currentCategory === category;
-    return `
-      px-6 py-2.5 rounded-full font-semibold text-sm md:text-base transition-all duration-300 border
-      ${
-        isActive
-          ? "bg-green-600 text-white border-green-600 shadow-md transform scale-105"
-          : "bg-white text-gray-500 border-gray-200 hover:border-green-400 hover:text-green-600"
-      }
-    `;
-  };
 
   return (
-    <div className="flex justify-center items-center gap-4 mb-10">
-      <Link
-        href={`/${locale}/profil/staf/akademik`}
-        className={getButtonStyle("akademik")}
-        scroll={false}
-      >
-        Staf Akademik
-      </Link>
+    <div className="flex flex-wrap justify-center items-center gap-3 md:gap-4 mb-12">
+      {FILTER_ITEMS.map((item) => {
+        const isActive = currentCategory === item.key;
 
-      <Link
-        href={`/${locale}/profil/staf/administrasi`}
-        className={getButtonStyle("administrasi")}
-        scroll={false}
-      >
-        Staf Administrasi
-      </Link>
+        return (
+          <Link
+            key={item.key}
+            href={`/${locale}/profil/staf/${item.key}`}
+            scroll={false} // Mencegah scroll jump saat ganti tab
+            aria-current={isActive ? "page" : undefined}
+            className={`
+              px-8 py-3 rounded-full font-bold text-sm md:text-base 
+              transition-all duration-300 border
+              ${isActive
+                ? "bg-[#005320] text-white border-[#005320] shadow-lg transform scale-105"
+                : "bg-white text-gray-500 border-gray-200 hover:border-[#005320] hover:text-[#005320] hover:bg-green-50"
+              }
+            `}
+          >
+            {item.label}
+          </Link>
+        );
+      })}
     </div>
   );
 }

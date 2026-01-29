@@ -8,6 +8,8 @@ import { getStrapiMedia } from "@/lib/strapi/utils";
 import { FaArrowLeft, FaBook, FaGlobe } from "react-icons/fa";
 import { SiGooglescholar } from "react-icons/si";
 import PageHeader from "@/components/ui/PageHeader";
+import { Metadata } from "next";
+import { getTranslations } from "next-intl/server"; 
 
 // --- TYPE DEFINITIONS ---
 
@@ -31,100 +33,140 @@ interface EducationItem {
 interface RoleDetail {
   id: number;
   __component: string;
-  expertise?: string; // Untuk academic-data
+  expertise?: string;
   sinta_url?: string;
   scopus_url?: string;
   google_scholar_url?: string;
-  position?: string; // Untuk admin-data
+  position?: string;
 }
 
-interface StaffAttributes {
+interface StaffBase {
   name: string;
   nip: string;
   email: string;
   slug: string;
   category: string;
-  photo?: StrapiImage;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  photo?: { data: any } | any;
   Role_Details?: RoleDetail[];
   Education_History?: EducationItem[];
 }
 
-interface StaffItem {
+interface StrapiEntity {
   id: number;
-  attributes?: StaffAttributes;
-  // Fallback properties for flattened structure
-  name?: string;
-  nip?: string;
-  photo?: StrapiImage;
-  email?: string;
-  slug?: string;
-  category?: string;
-  Role_Details?: RoleDetail[];
-  Education_History?: EducationItem[];
+  attributes?: StaffBase;
+  [key: string]: unknown;
 }
 
-interface PageConfig {
-  attributes?: {
-    Default_Card_Banner?: StrapiImage;
-    Icon_Sinta?: StrapiImage;
-    Icon_Scopus?: StrapiImage;
-    Icon_GoogleScholar?: StrapiImage;
-  };
-  // Fallback flattened
+interface StrapiResponse<T> {
+  data: T;
+  meta?: Record<string, unknown>;
+}
+
+interface PageConfigAttributes {
   Default_Card_Banner?: StrapiImage;
   Icon_Sinta?: StrapiImage;
   Icon_Scopus?: StrapiImage;
   Icon_GoogleScholar?: StrapiImage;
 }
 
-interface GlobalData {
-  attributes?: {
-    Default_Hero_Image?: StrapiImage;
-  };
-  Default_Hero_Image?: StrapiImage;
+interface PageConfigEntity {
+  attributes?: PageConfigAttributes;
+  [key: string]: unknown;
 }
 
-// 1. Generate Static Params
+// --- HELPER: Normalisasi Data ---
+function getAttributes(item: StrapiEntity | null | undefined): (StaffBase & { id: number }) | null {
+  if (!item) return null;
+  const id = item.id;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const attrs = (item.attributes || item) as any;
+  return { id, ...attrs };
+}
+
+// Helper Ekstraksi URL Gambar
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getImageUrl(img: any): string | undefined {
+  if (!img) return undefined;
+  const url = img.url || img.data?.attributes?.url || img.attributes?.url;
+  return getStrapiMedia(url) || undefined;
+}
+
+// --- 1. GENERATE STATIC PARAMS ---
 export async function generateStaticParams() {
-  const staffData = await fetchAPI("/staff-members", {
-    fields: ["slug", "category"],
-    populate: [],
-    pagination: { limit: 100 },
-  });
+  try {
+    const staffData = await fetchAPI("/staff-members", {
+      fields: ["slug", "category"],
+      pagination: { limit: 100 },
+    }) as StrapiResponse<StrapiEntity[]>;
 
-  const locales = ["id", "en"];
-  const params = [];
+    const locales = ["id", "en"];
+    const params: { locale: string; category: string; slug: string }[] = [];
 
-  if (!staffData?.data) return [];
+    if (!staffData?.data) return [];
 
-  for (const locale of locales) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    for (const staff of staffData.data as any[]) {
-      const attr = staff.attributes || staff;
-      if (attr.slug && attr.category) {
-        params.push({
-          locale,
-          category: attr.category,
-          slug: attr.slug,
+    staffData.data.forEach((item) => {
+      const data = getAttributes(item);
+      if (data?.slug && data?.category) {
+        locales.forEach((locale) => {
+          params.push({
+            locale,
+            category: data.category,
+            slug: data.slug,
+          });
         });
       }
-    }
+    });
+
+    return params;
+  } catch (error) {
+    console.error("Error generating params for staff:", error);
+    return [];
   }
-  return params;
 }
 
-// 2. Halaman Detail Staf
+// --- 2. GENERATE METADATA ---
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string; locale: string }>;
+}): Promise<Metadata> {
+  const { slug, locale } = await params;
+  const t = await getTranslations({ locale, namespace: "StaffDetail" });
+
+  const res = await fetchAPI("/staff-members", {
+    filters: { slug: { $eq: slug } },
+    locale,
+    fields: ["name", "category"],
+  }) as StrapiResponse<StrapiEntity[]>;
+
+  const data = getAttributes(res?.data?.[0]);
+
+  if (!data) return { title: t("staff_not_found_title") }; 
+
+  const role = data.category === 'akademik' ? t("role_academic") : t("role_admin");
+
+  return {
+    title: `${data.name} - ${role} ${t("meta_title_suffix")}`,
+    description: `${t("meta_desc_prefix")} ${data.name}, ${t("nip")}: ${data.nip || '-'}`,
+  };
+}
+
+// --- 3. HALAMAN UTAMA ---
 export default async function StaffDetailPage({
   params,
 }: {
   params: Promise<{ category: string; slug: string; locale: string }>;
 }) {
   const { category, slug, locale } = await params;
+  const t = await getTranslations({ locale, namespace: "StaffDetail" }); 
 
-  // --- Fetch Data ---
-  let staff: StaffItem | null = null;
-  let pageConfig: PageConfig | null = null;
-  let globalData: GlobalData | null = null;
+  // Init Data Containers
+  let staff: (StaffBase & { id: number }) | null = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let pageConfig: any = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let globalData: any = null;
 
   try {
     const [staffRes, configRes, globalRes] = await Promise.all([
@@ -137,7 +179,8 @@ export default async function StaffDetailPage({
           Education_History: { populate: "*" },
         },
         locale: locale,
-      }),
+      }) as Promise<StrapiResponse<StrapiEntity[]>>,
+
       // B. Config Halaman
       fetchAPI("/staff-page-config", {
         populate: {
@@ -147,176 +190,133 @@ export default async function StaffDetailPage({
           Icon_GoogleScholar: { fields: ["url"] },
         },
         locale: locale,
-      }),
+      }) as Promise<StrapiResponse<PageConfigEntity>>,
+
       // C. Global
       fetchAPI("/global", {
         populate: "Default_Hero_Image",
         locale: locale,
-      }),
+      }) as Promise<StrapiResponse<StrapiEntity>>,
     ]);
 
-    staff = staffRes?.data?.[0] || null;
-    pageConfig = configRes?.data;
-    globalData = globalRes?.data;
+    staff = getAttributes(staffRes?.data?.[0]);
+    pageConfig = configRes?.data?.attributes || configRes?.data;
+    globalData = globalRes?.data?.attributes || globalRes?.data;
+
   } catch (error) {
     console.error("[StaffDetail] Error fetching data:", error);
   }
 
-  if (!staff) {
-    return notFound();
-  }
+  if (!staff) return notFound();
 
-  // --- Ekstraksi Data ---
-  const rawStaff = staff as StaffItem;
-  const attr = rawStaff.attributes || rawStaff;
+  // --- Normalisasi Field ---
+  const photoUrl = getImageUrl(staff.photo) || "/images/placeholder-avatar.png";
 
-  const {
-    name,
-    nip,
-    photo,
-    email,
-    Role_Details = [],
-    Education_History = [],
-  } = attr as StaffAttributes;
+  // Hero & Banner
+  const heroUrl = getImageUrl(globalData?.Default_Hero_Image);
+  const cardBannerUrl = getImageUrl(pageConfig?.Default_Card_Banner);
 
-  // --- PERBAIKAN DI SINI (FIX TYPESCRIPT ERROR) ---
-  // Kita casting ke 'any' karena 'photoObj' bisa berupa dua struktur berbeda (flat/nested)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const photoObj = (photo?.data || photo) as any;
+  // Icons
+  const icons = {
+    sinta: getImageUrl(pageConfig?.Icon_Sinta),
+    scopus: getImageUrl(pageConfig?.Icon_Scopus),
+    scholar: getImageUrl(pageConfig?.Icon_GoogleScholar),
+  };
 
-  const photoUrl =
-    getStrapiMedia(photoObj?.attributes?.url || photoObj?.url) ||
-    "/images/placeholder-avatar.png";
-
-  const academicData = Role_Details?.find(
-    (item: RoleDetail) => item.__component === "staff-data.academic-data"
+  // Logic Role Details
+  const academicData = staff.Role_Details?.find(
+    (item) => item.__component === "staff-data.academic-data"
   );
-  const adminData = Role_Details?.find(
-    (item: RoleDetail) => item.__component === "staff-data.admin-data"
+  const adminData = staff.Role_Details?.find(
+    (item) => item.__component === "staff-data.admin-data"
   );
 
   let mainRole = "-";
   if (category === "akademik") {
-    mainRole = academicData?.expertise || "Dosen";
+    mainRole = academicData?.expertise || t("default_role_academic"); 
   } else {
-    mainRole = adminData?.position || "Tenaga Kependidikan";
+    mainRole = adminData?.position || t("default_role_admin");
   }
 
-  // --- Helper URL ---
-  const sinta_url = academicData?.sinta_url;
-  const scopus_url = academicData?.scopus_url;
-  const google_scholar_url = academicData?.google_scholar_url;
-
-  const getUrl = (obj: StrapiImage | undefined | null) =>
-    obj?.url || obj?.data?.attributes?.url;
-
-  const heroUrl = getUrl(
-    globalData?.attributes?.Default_Hero_Image || globalData?.Default_Hero_Image
-  );
-
-  const cardBannerUrl = getUrl(
-    pageConfig?.attributes?.Default_Card_Banner ||
-    pageConfig?.Default_Card_Banner
-  );
-
-  const icons = {
-    sinta: getUrl(pageConfig?.attributes?.Icon_Sinta || pageConfig?.Icon_Sinta),
-    scopus: getUrl(
-      pageConfig?.attributes?.Icon_Scopus || pageConfig?.Icon_Scopus
-    ),
-    scholar: getUrl(
-      pageConfig?.attributes?.Icon_GoogleScholar ||
-      pageConfig?.Icon_GoogleScholar
-    ),
-  };
-
-  const roleLabel =
-    category === "akademik"
-      ? locale === "en"
-        ? "Academic Staff"
-        : "Staf Akademik"
-      : locale === "en"
-        ? "Administrative Staff"
-        : "Staf Administrasi";
-
-  const educationLabel = locale === "en" ? "Education" : "Pendidikan";
+  // Label UI (Menggunakan Translation)
+  const roleLabel = category === "akademik" ? t("role_academic") : t("role_admin");
 
   return (
     <div className="bg-gray-50 min-h-screen pb-20 -mt-20 md:-mt-24">
 
       <PageHeader
-        title={name}
-        breadcrumb={`Profil / Staf / ${roleLabel} / Detail`}
+        title={staff.name}
+        breadcrumb={`${t("breadcrumb_profile")} / ${t("breadcrumb_staff")} / ${roleLabel} / ${t("breadcrumb_detail")}`}
         backgroundImageUrl={heroUrl}
-        sectionTitle="Profil"
+        sectionTitle={t("profile_section_title")}
         sectionSubtitle={roleLabel}
       />
 
       <div className="container mx-auto px-4 relative z-10">
 
         <div className="bg-white rounded-xl shadow-xl overflow-hidden max-w-4xl mx-auto border border-gray-100">
+
+          {/* BANNER CARD */}
           <div className="h-48 md:h-64 w-full relative">
             {cardBannerUrl ? (
               <Image
-                src={getStrapiMedia(cardBannerUrl)!}
+                src={cardBannerUrl}
                 alt="Banner Profile"
                 fill
                 className="object-cover"
+                sizes="(max-width: 768px) 100vw, 800px"
               />
             ) : (
-              <div className="w-full h-full bg-green-800" />
+              <div className="w-full h-full bg-[#005320]" />
             )}
             <div className="absolute inset-0 bg-black/10"></div>
           </div>
 
           <div className="px-8 pb-10 relative text-center">
+
+            {/* FOTO PROFIL (Overlap Banner) */}
             <div className="relative -mt-24 mb-6 inline-block">
               <div className="w-40 h-40 md:w-48 md:h-48 rounded-full border-4 border-white shadow-lg overflow-hidden bg-gray-200 relative z-10">
-                {photoUrl ? (
-                  <Image
-                    src={photoUrl}
-                    alt={name || "Staff Photo"}
-                    fill
-                    className="object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400">
-                    No Photo
-                  </div>
-                )}
+                <Image
+                  src={photoUrl}
+                  alt={staff.name || "Staff Photo"}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 200px, 200px"
+                />
               </div>
             </div>
 
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-              {name}
+              {staff.name}
             </h1>
             <p className="text-xl text-gray-500 font-medium mb-4">
-              NIP: {nip || "-"}
+              {t("nip")}: {staff.nip || "-"}
             </p>
 
-            <div className="inline-block px-6 py-2 bg-green-50 rounded-full text-green-700 font-semibold mb-8">
+            <div className="inline-block px-6 py-2 bg-green-50 rounded-full text-[#005320] font-semibold mb-8 border border-green-100">
               {mainRole}
             </div>
 
-            {email && (
+            {staff.email && (
               <div className="mb-8 border-t border-gray-200 pt-8 max-w-2xl mx-auto">
-                <h4 className="text-2xl font-bold text-gray-900 mb-4">Email</h4>
+                <h4 className="text-2xl font-bold text-gray-900 mb-4">{t("email_title")}</h4>
                 <a
-                  href={`mailto:${email}`}
-                  className="text-xl text-gray-600 hover:text-green-600 underline decoration-green-600/30 underline-offset-4 transition-all"
+                  href={`mailto:${staff.email}`}
+                  className="text-xl text-gray-600 hover:text-[#005320] underline decoration-green-600/30 underline-offset-4 transition-all"
                 >
-                  {email}
+                  {staff.email}
                 </a>
               </div>
             )}
 
-            {Education_History && Education_History.length > 0 && (
+            {staff.Education_History && staff.Education_History.length > 0 && (
               <div className="mb-8 border-t border-gray-200 pt-8 max-w-2xl mx-auto text-center">
                 <h4 className="text-2xl font-bold text-gray-900 mb-6">
-                  {educationLabel}
+                  {t("education")}
                 </h4>
                 <div className="space-y-4">
-                  {Education_History.map((edu: EducationItem, index: number) => (
+                  {staff.Education_History.map((edu, index) => (
                     <div key={index} className="text-gray-700">
                       <span className="font-semibold block text-gray-900">
                         {edu.level} {edu.major}
@@ -330,81 +330,53 @@ export default async function StaffDetailPage({
               </div>
             )}
 
+            {/* EXTERNAL LINKS (AKADEMIK ONLY) */}
             {category === "akademik" && (
               <div className="flex justify-center gap-6 mt-10 pt-8 border-t border-gray-100 items-center flex-wrap">
-                {google_scholar_url ? (
+                {academicData?.google_scholar_url && (
                   <Link
-                    href={google_scholar_url}
+                    href={academicData.google_scholar_url}
                     target="_blank"
-                    className="hover:opacity-80 transition-opacity flex items-center justify-center"
+                    className="hover:opacity-80 transition-opacity"
                     title="Google Scholar"
                   >
                     {icons.scholar ? (
-                      <Image
-                        src={getStrapiMedia(icons.scholar)!}
-                        alt="Google Scholar"
-                        width={120}
-                        height={40}
-                        className="h-10 w-auto object-contain"
-                      />
+                      <Image src={icons.scholar} alt="Google Scholar" width={120} height={40} className="h-10 w-auto object-contain" />
                     ) : (
-                      <div className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:border-blue-500 hover:text-blue-600">
-                        <SiGooglescholar className="w-6 h-6" />
-                        <span className="font-medium text-sm">
-                          Google Scholar
-                        </span>
-                      </div>
+                      <div className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:text-blue-600"><SiGooglescholar /> Scholar</div>
                     )}
                   </Link>
-                ) : null}
+                )}
 
-                {sinta_url ? (
+                {academicData?.sinta_url && (
                   <Link
-                    href={sinta_url}
+                    href={academicData.sinta_url}
                     target="_blank"
-                    className="hover:opacity-80 transition-opacity flex items-center justify-center"
+                    className="hover:opacity-80 transition-opacity"
                     title="Sinta"
                   >
                     {icons.sinta ? (
-                      <Image
-                        src={getStrapiMedia(icons.sinta)!}
-                        alt="Sinta"
-                        width={100}
-                        height={40}
-                        className="h-8 w-auto object-contain"
-                      />
+                      <Image src={icons.sinta} alt="Sinta" width={100} height={40} className="h-8 w-auto object-contain" />
                     ) : (
-                      <div className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:border-blue-600 hover:text-blue-600">
-                        <FaBook className="w-5 h-5" />
-                        <span className="font-medium text-sm">SINTA</span>
-                      </div>
+                      <div className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:text-blue-600"><FaBook /> SINTA</div>
                     )}
                   </Link>
-                ) : null}
+                )}
 
-                {scopus_url ? (
+                {academicData?.scopus_url && (
                   <Link
-                    href={scopus_url}
+                    href={academicData.scopus_url}
                     target="_blank"
-                    className="hover:opacity-80 transition-opacity flex items-center justify-center"
+                    className="hover:opacity-80 transition-opacity"
                     title="Scopus"
                   >
                     {icons.scopus ? (
-                      <Image
-                        src={getStrapiMedia(icons.scopus)!}
-                        alt="Scopus"
-                        width={100}
-                        height={40}
-                        className="h-8 w-auto object-contain"
-                      />
+                      <Image src={icons.scopus} alt="Scopus" width={100} height={40} className="h-8 w-auto object-contain" />
                     ) : (
-                      <div className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:border-orange-500 hover:text-orange-600">
-                        <FaGlobe className="w-5 h-5" />
-                        <span className="font-medium text-sm">Scopus</span>
-                      </div>
+                      <div className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:text-orange-600"><FaGlobe /> Scopus</div>
                     )}
                   </Link>
-                ) : null}
+                )}
               </div>
             )}
           </div>
@@ -413,14 +385,10 @@ export default async function StaffDetailPage({
         <div className="text-center mt-12 mb-16">
           <Link
             href={`/${locale}/profil/staf/${category}`}
-            className="inline-flex items-center gap-2 px-8 py-3 bg-white border border-green-200 text-green-700 font-semibold rounded-full shadow-sm hover:shadow-md hover:bg-green-50 hover:border-green-300 transition-all duration-300 transform hover:-translate-y-1 group"
+            className="inline-flex items-center gap-2 px-8 py-3 bg-white border border-green-200 text-[#005320] font-semibold rounded-full shadow-sm hover:shadow-md hover:bg-green-50 transition-all duration-300 transform hover:-translate-y-1 group"
           >
             <FaArrowLeft className="text-sm transition-transform duration-300 group-hover:-translate-x-1" />
-            <span>
-              {locale === "en"
-                ? "Back to Staff List"
-                : "Kembali ke Daftar Staf"}
-            </span>
+            <span>{t("back_to_list")}</span>
           </Link>
         </div>
       </div>

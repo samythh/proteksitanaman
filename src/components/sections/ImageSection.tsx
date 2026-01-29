@@ -1,12 +1,11 @@
 // File: src/components/sections/ImageSection.tsx
-
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import { getStrapiMedia } from "@/lib/strapi/utils";
-import { FaTimes, FaSearchPlus } from "react-icons/fa";
+import { X, ZoomIn } from "lucide-react";
 
 // --- TYPE DEFINITIONS ---
 
@@ -43,13 +42,22 @@ interface ImageSectionProps {
 
 export default function ImageSection({ data }: ImageSectionProps) {
    const [isOpen, setIsOpen] = useState(false);
+   const [mounted, setMounted] = useState(false);
 
-   // Extract Data
-   const title = data.title;
-   const desc = data.description;
-   const alignment = data.alignment || "left";
-   const imageSize = data.image_size || "medium";
-   const enableLightbox = data.is_lightbox_enabled !== false;
+   // Ensure portal only renders on client
+   useEffect(() => {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setMounted(true);
+   }, []);
+
+   // Extract Data with defaults
+   const {
+      title,
+      description,
+      alignment = "left",
+      image_size = "medium",
+      is_lightbox_enabled: enableLightbox = true
+   } = data;
 
    // --- 1. CONFIGURATION: ALIGNMENT ---
    const alignStyles = {
@@ -70,37 +78,25 @@ export default function ImageSection({ data }: ImageSectionProps) {
       }
    };
 
-   // --- 2. CONFIGURATION: SIZE (UPDATED) ---
-   // Kita sesuaikan ukuran container berdasarkan request Anda
+   // --- 2. CONFIGURATION: SIZE ---
    const sizeStyles = {
-      // Small: Sangat kecil (Logo/Icon) - Sekitar 200px
       small: "max-w-[180px] md:max-w-[200px]",
-
-      // Medium: Setengah dari Large - Sekitar 350px - 400px
       medium: "max-w-[300px] md:max-w-[400px]",
-
-      // Large: Menjadi ukuran Medium sebelumnya (Standar Foto) - Sekitar 700px
       large: "max-w-[500px] md:max-w-[700px]",
    };
 
-   const activeAlign = alignStyles[alignment];
-   const activeSize = sizeStyles[imageSize];
+   const activeAlign = alignStyles[alignment] || alignStyles.left;
+   const activeSize = sizeStyles[image_size] || sizeStyles.medium;
 
-   // --- LOGIKA PENCARIAN URL ---
-   const getImageUrl = (obj: ImageSectionData): string | null | undefined => {
-      if (obj.image?.data?.attributes?.url) return obj.image.data.attributes.url;
-      if (obj.image?.data?.url) return obj.image.data.url;
-      if (obj.image?.url) return obj.image.url;
-      return null;
+   // --- LOGIKA URL GAMBAR ---
+   const getImageUrl = (imgField?: ImageField): string | null => {
+      if (!imgField) return null;
+      const url = imgField.url || imgField.data?.attributes?.url || imgField.data?.url;
+      return getStrapiMedia(url);
    };
 
-   const rawUrl = getImageUrl(data) || null;
-   const imgUrl = getStrapiMedia(rawUrl);
-
-   const imgField = data.image;
-   const imgData = imgField?.data;
-   const imgAttr = imgData?.attributes;
-
+   const imgUrl = getImageUrl(data.image);
+   const imgAttr = data.image?.data?.attributes;
    const altText = imgAttr?.alternativeText || title || "Image Section";
    const imgWidth = imgAttr?.width || 800;
    const imgHeight = imgAttr?.height || 600;
@@ -145,19 +141,13 @@ export default function ImageSection({ data }: ImageSectionProps) {
                      {enableLightbox && (
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300 flex items-center justify-center">
                            <div className="opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 bg-white/90 p-3 rounded-full text-green-700 shadow-md">
-                              <FaSearchPlus size={24} />
+                              <ZoomIn size={24} />
                            </div>
                         </div>
                      )}
                   </div>
 
-                  {/* 3. Description */}
-                  {desc && (
-                     <p className={`text-gray-600 mt-4 text-sm md:text-base max-w-2xl leading-relaxed ${activeAlign.descMargin}`}>
-                        {desc}
-                     </p>
-                  )}
-
+                  {/* Hint Text Mobile */}
                   {enableLightbox && (
                      <p className="text-xs text-gray-400 mt-2 italic block md:hidden">
                         Ketuk gambar untuk memperbesar
@@ -165,22 +155,33 @@ export default function ImageSection({ data }: ImageSectionProps) {
                   )}
                </div>
 
+               {/* 3. Description */}
+               {description && (
+                  <p className={`text-gray-600 mt-4 text-sm md:text-base max-w-2xl leading-relaxed ${activeAlign.descMargin}`}>
+                     {description}
+                  </p>
+               )}
+
             </div>
          </section>
 
-         {/* --- MODAL POPUP --- */}
-         {isOpen && enableLightbox && typeof document !== "undefined" && createPortal(
+         {/* --- MODAL POPUP (Portal) --- */}
+         {/* Portal hanya dirender jika 'mounted' true (Client Side) dan 'isOpen' true */}
+         {mounted && isOpen && enableLightbox && createPortal(
             <div
                className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 backdrop-blur-sm p-4 animate-in fade-in duration-300"
                onClick={() => setIsOpen(false)}
             >
+               {/* Close Button */}
                <button
                   onClick={() => setIsOpen(false)}
                   className="absolute top-6 right-6 text-white hover:text-gray-300 p-2 z-[10000] transition-colors bg-black/50 rounded-full"
+                  aria-label="Close"
                >
-                  <FaTimes size={32} />
+                  <X size={32} />
                </button>
 
+               {/* Fullscreen Image */}
                <div
                   className="relative w-full h-full max-w-6xl max-h-[90vh] flex items-center justify-center"
                   onClick={(e) => e.stopPropagation()}

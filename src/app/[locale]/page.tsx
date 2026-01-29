@@ -9,6 +9,14 @@ type Props = {
   params: Promise<{ locale: string }>;
 };
 
+// --- TAMBAHAN: DEFINISI TIPE RESPONSE ---
+// Kita buat interface sederhana agar TS tahu ada properti 'data'
+interface StrapiResponse {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: any;
+  meta?: Record<string, unknown>;
+}
+
 // --- 1. FUNCTION FETCH DATA HOMEPAGE ---
 async function getHomePageData(locale: string) {
   try {
@@ -35,7 +43,8 @@ async function getHomePageData(locale: string) {
       }
     });
 
-    const response = await fetchAPI(`${path}?${query}`);
+    // Casting ke StrapiResponse
+    const response = await fetchAPI(`${path}?${query}`) as StrapiResponse;
     return response.data;
   } catch (error) {
     console.error("Error fetching home page:", error);
@@ -57,7 +66,8 @@ async function getLatestArticles(locale: string) {
       fields: ["title", "slug", "publishedAt", "publishedDate", "excerpt"],
     });
 
-    const res = await fetchAPI(`/articles?${query}`);
+    // Casting ke StrapiResponse
+    const res = await fetchAPI(`/articles?${query}`) as StrapiResponse;
     return res?.data || [];
   } catch (error) {
     console.error("Error fetching articles:", error);
@@ -70,7 +80,7 @@ async function getLatestEvents(locale: string) {
   try {
     const query = qs.stringify({
       locale: locale,
-      sort: ['startDate:desc'], // Urutkan: Terbaru ke Terlama
+      sort: ['startDate:desc'],
       pagination: { limit: 4 },
       populate: {
         image: { fields: ["url"] },
@@ -78,7 +88,8 @@ async function getLatestEvents(locale: string) {
       },
     });
 
-    const res = await fetchAPI(`/events?${query}`);
+    // Casting ke StrapiResponse
+    const res = await fetchAPI(`/events?${query}`) as StrapiResponse;
     return res?.data || [];
   } catch (error) {
     console.error("Error fetching events:", error);
@@ -130,7 +141,7 @@ export default async function HomePage({ params }: Props) {
         globalData={{
           locale: locale,
           articles: formattedArticles,
-          latestEvents: latestEvents // <--- INI SUDAH BENAR DI SINI
+          latestEvents: latestEvents
         }}
       />
     </div>
