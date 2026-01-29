@@ -9,7 +9,7 @@ import { FaArrowLeft, FaBook, FaGlobe } from "react-icons/fa";
 import { SiGooglescholar } from "react-icons/si";
 import PageHeader from "@/components/ui/PageHeader";
 import { Metadata } from "next";
-import { getTranslations } from "next-intl/server"; 
+import { getTranslations } from "next-intl/server";
 
 // --- TYPE DEFINITIONS ---
 
@@ -137,12 +137,12 @@ export async function generateMetadata({
   const res = await fetchAPI("/staff-members", {
     filters: { slug: { $eq: slug } },
     locale,
-    fields: ["name", "category"],
+    fields: ["name", "category", "nip"],
   }) as StrapiResponse<StrapiEntity[]>;
 
   const data = getAttributes(res?.data?.[0]);
 
-  if (!data) return { title: t("staff_not_found_title") }; 
+  if (!data) return { title: t("staff_not_found_title") };
 
   const role = data.category === 'akademik' ? t("role_academic") : t("role_admin");
 
@@ -159,7 +159,7 @@ export default async function StaffDetailPage({
   params: Promise<{ category: string; slug: string; locale: string }>;
 }) {
   const { category, slug, locale } = await params;
-  const t = await getTranslations({ locale, namespace: "StaffDetail" }); 
+  const t = await getTranslations({ locale, namespace: "StaffDetail" });
 
   // Init Data Containers
   let staff: (StaffBase & { id: number }) | null = null;
@@ -233,7 +233,7 @@ export default async function StaffDetailPage({
 
   let mainRole = "-";
   if (category === "akademik") {
-    mainRole = academicData?.expertise || t("default_role_academic"); 
+    mainRole = academicData?.expertise || t("default_role_academic");
   } else {
     mainRole = adminData?.position || t("default_role_admin");
   }

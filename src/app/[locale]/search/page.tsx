@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { meiliClient } from "@/lib/meilisearch";
 import UniversalSearchCard from "@/components/features/UniversalSearchCard";
 import {
@@ -11,30 +12,50 @@ import {
   FaSortAmountDown,
 } from "react-icons/fa";
 
-// --- KONFIGURASI KATEGORI ---
-// 'id' harus sesuai dengan nama index (uid) di Meilisearch/Strapi Anda
+interface SearchHit {
+  id: string | number;
+  type: string;
+  title: string;
+  content: string;
+  link: string;
+  timestamp?: number;
+  unique_id?: string;
+  slug?: string;
+  category?: string;
+  [key: string]: unknown;
+}
+
+interface MeiliMultiSearchResponse {
+  results: Array<{
+    indexUid: string;
+    hits: SearchHit[];
+    estimatedTotalHits?: number;
+    [key: string]: unknown;
+  }>;
+}
+
 const CATEGORIES = [
-  { id: "all", label: "Semua" },
-  { id: "article", label: "Berita & Artikel" },
-  { id: "event", label: "Agenda" },
-  { id: "staff", label: "Dosen & Staff" }, // Pastikan UID di plugins.js adalah 'staff'
-  { id: "facility", label: "Fasilitas" }, // Pastikan UID di plugins.js adalah 'facility'
-  { id: "page", label: "Halaman" },
+  { id: "all", labelKey: "filter_all" },
+  { id: "article", labelKey: "filter_article" },
+  { id: "event", labelKey: "filter_event" },
+  { id: "staff", labelKey: "filter_staff" },
+  { id: "facility", labelKey: "filter_facility" },
+  { id: "page", labelKey: "filter_page" },
 ];
 
-// --- WRAPPER SUSPENSE (Wajib untuk Next.js App Router) ---
 export default function SearchPage({
   params,
 }: {
   params: Promise<{ locale: string }>;
 }) {
+  const t = useTranslations("SearchPage");
   return (
     <Suspense
       fallback={
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
           <div className="text-center">
-            <FaSpinner className="animate-spin text-4xl text-green-600 mx-auto mb-4" />
-            <p className="text-gray-500">Memuat pencarian...</p>
+            <FaSpinner className="animate-spin text-4xl text-[#005320] mx-auto mb-4" />
+            <p className="text-gray-500 font-medium">{t("loading_initial")}</p>
           </div>
         </div>
       }
@@ -44,50 +65,40 @@ export default function SearchPage({
   );
 }
 
-// --- KOMPONEN UTAMA ---
 function SearchContent({ params }: { params: Promise<{ locale: string }> }) {
+  const t = useTranslations("SearchPage");
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
 
-  // 1. Ambil Parameter dari URL
   const query = searchParams.get("q") || "";
   const activeCategory = searchParams.get("category") || "all";
-  const sortBy = searchParams.get("sort") || "relevance"; // 'relevance', 'newest', 'oldest'
+  const sortBy = searchParams.get("sort") || "relevance";
   const page = parseInt(searchParams.get("page") || "1");
 
-  // 2. State Lokal
-  const [results, setResults] = useState<any[]>([]);
-  const [totalHits, setTotalHits] = useState(0); // Estimasi total
+  const [results, setResults] = useState<SearchHit[]>([]);
+  const [totalHits, setTotalHits] = useState(0);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [locale, setLocale] = useState("id");
 
   const HITS_PER_PAGE = 10;
 
-  // Ambil locale (id/en)
   useEffect(() => {
     params.then((p) => setLocale(p.locale));
   }, [params]);
 
-  // 3. Fungsi Update URL (Filter/Sort/Page)
-  // Ini akan mengubah URL tanpa reload, tapi memicu useEffect pencarian di bawah
   const updateParams = (key: string, value: string) => {
     const current = new URLSearchParams(Array.from(searchParams.entries()));
     current.set(key, value);
-
-    // Reset ke halaman 1 jika filter atau sort berubah
     if (key !== "page") {
       current.set("page", "1");
     }
-
     router.push(`${pathname}?${current.toString()}`, { scroll: false });
   };
 
-  // 4. LOGIKA UTAMA PENCARIAN MEILISEARCH
   useEffect(() => {
     const performSearch = async () => {
-      // Jika tidak ada query, bersihkan hasil
       if (!query.trim()) {
         setResults([]);
         setTotalHits(0);
@@ -98,55 +109,73 @@ function SearchContent({ params }: { params: Promise<{ locale: string }> }) {
       setHasSearched(true);
 
       try {
-        // A. Tentukan Index mana yang mau dicari
-        // Jika 'all', ambil semua index dari konstanta CATEGORIES (kecuali 'all')
-        // Jika spesifik, ambil array berisi 1 index saja.
         const indexesToSearch =
           activeCategory === "all"
             ? CATEGORIES.filter((c) => c.id !== "all").map((c) => c.id)
             : [activeCategory];
 
-        // B. Tentukan Sorting (Meilisearch format: ['field:asc'])
-        // Wajib: Field 'timestamp' harus diset sebagai 'Sortable' di setting Meilisearch
         let sortOptions: string[] | undefined = undefined;
         if (sortBy === "newest") sortOptions = ["timestamp:desc"];
         if (sortBy === "oldest") sortOptions = ["timestamp:asc"];
 
-        // C. Hitung Offset untuk Pagination
         const offset = (page - 1) * HITS_PER_PAGE;
 
-        // D. Bangun Query MultiSearch
         const queries = indexesToSearch.map((indexUid) => ({
           indexUid: indexUid,
           q: query,
-          limit: HITS_PER_PAGE, // Ambil secukupnya per index
-          offset: offset, // Pagination
+          limit: HITS_PER_PAGE,
+          offset: offset,
           sort: sortOptions,
-          // Optimasi respons:
-          attributesToCrop: ["content:30"], // Potong deskripsi
-          attributesToHighlight: ["title", "content"], // Highlight keyword
+          attributesToCrop: ["content:30"],
+          attributesToHighlight: ["title", "content"],
           showMatchesPosition: true,
+          filter: [`locale = ${locale}`],
         }));
 
-        // E. Eksekusi Request ke Meilisearch
-        const response = await meiliClient.multiSearch({ queries });
+        const searchResponse = await (meiliClient as unknown as {
+          multiSearch: (params: { queries: unknown[] }) => Promise<MeiliMultiSearchResponse>
+        }).multiSearch({ queries });
 
-        // F. Gabungkan Hasil (Flattening)
-        let combinedHits = response.results.flatMap((res) => res.hits);
+        const combinedHits = searchResponse.results.flatMap((res) => {
+          return res.hits.map((hit) => {
+            let link = `/${locale}`;
+            const slug = (hit.slug as string) || "";
 
-        // Hitung total estimasi hits (Meilisearch memberikan estimatedTotalHits per index)
-        const totalEstimated = response.results.reduce(
-          (acc, curr) => acc + (curr.estimatedTotalHits || 0),
+            switch (res.indexUid) {
+              case "article":
+                link = `/${locale}/informasi/berita/${slug}`;
+                break;
+              case "event":
+                link = `/${locale}/informasi/agenda/${slug}`;
+                break;
+              case "staff":
+                link = `/${locale}/profil/staf/${(hit.category as string) || "akademik"}/${slug}`;
+                break;
+              case "facility":
+                link = `/${locale}/fasilitas/${slug}`;
+                break;
+              case "page":
+                link = `/${locale}/${slug}`;
+                break;
+            }
+
+            return {
+              ...hit,
+              type: res.indexUid,
+              link: link,
+            };
+          });
+        });
+
+        const totalEstimated = searchResponse.results.reduce(
+          (acc: number, curr) => acc + (curr.estimatedTotalHits || 0),
           0,
         );
 
-        // G. Client-Side Sorting untuk Mode "Semua" (All)
-        // Karena Meilisearch mengembalikan sort per-index, saat digabung urutannya bisa acak.
-        // Kita rapikan lagi berdasarkan timestamp di sisi client.
         if (activeCategory === "all" && sortBy !== "relevance") {
-          combinedHits.sort((a: any, b: any) => {
-            const timeA = a.timestamp || 0;
-            const timeB = b.timestamp || 0;
+          combinedHits.sort((a: SearchHit, b: SearchHit) => {
+            const timeA = (a.timestamp as number) || 0;
+            const timeB = (b.timestamp as number) || 0;
             return sortBy === "newest" ? timeB - timeA : timeA - timeB;
           });
         }
@@ -160,158 +189,122 @@ function SearchContent({ params }: { params: Promise<{ locale: string }> }) {
       }
     };
 
-    performSearch();
-  }, [query, activeCategory, sortBy, page]); // Efek jalan setiap kali parameter ini berubah
+    const timeoutId = setTimeout(performSearch, 300);
+    return () => clearTimeout(timeoutId);
+  }, [query, activeCategory, sortBy, page, locale, t]);
 
-  // --- RENDER HALAMAN ---
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* HEADER */}
+    <div className="min-h-screen bg-gray-50 pt-24 pb-20">
+      <div className="container mx-auto px-4 max-w-5xl">
         <div className="mb-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                <FaSearch className="text-green-600" />
-                {query ? (
-                  <span>
-                    Hasil Pencarian:{" "}
-                    <span className="text-green-600 italic">"{query}"</span>
-                  </span>
-                ) : (
-                  "Pencarian"
-                )}
-              </h1>
-              {hasSearched && !loading && (
-                <p className="text-sm text-gray-500 mt-1">
-                  Ditemukan sekitar <b>{totalHits}</b> hasil
-                </p>
-              )}
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+            <FaSearch className="text-[#005320] w-8 h-8" />
+            {t("title")}
+          </h1>
+          <p className="text-gray-500 ml-11">
+            {t("showing_results_for")} <span className="font-bold text-gray-900">&quot;{query}&quot;</span>
+          </p>
+        </div>
+
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 flex flex-col lg:flex-row gap-6 justify-between items-start lg:items-center sticky top-24 z-20 mb-8">
+          <div className="w-full lg:w-auto overflow-x-auto pb-2 lg:pb-0 scrollbar-hide">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 text-gray-400 text-sm font-bold mr-2 uppercase tracking-wide">
+                <FaFilter size={14} />
+                {t("filter_label")}
+              </div>
+
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => updateParams("category", cat.id)}
+                  className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all duration-200 border ${activeCategory === cat.id
+                      ? "bg-[#005320] text-white border-[#005320] shadow-md"
+                      : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100 hover:border-gray-300"
+                    }`}
+                >
+                  {t(cat.labelKey)}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* TOOLBAR (FILTER & SORT) */}
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 sticky top-20 z-10">
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-              {/* Kategori Tabs (Scrollable Mobile) */}
-              <div className="w-full lg:w-auto overflow-x-auto pb-2 lg:pb-0 scrollbar-hide">
-                <div className="flex items-center gap-2">
-                  <FaFilter className="text-gray-400 mr-2 flex-shrink-0" />
-                  {CATEGORIES.map((cat) => (
-                    <button
-                      key={cat.id}
-                      onClick={() => updateParams("category", cat.id)}
-                      className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200 ${
-                        activeCategory === cat.id
-                          ? "bg-green-600 text-white shadow-md transform scale-105"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-green-700"
-                      }`}
-                    >
-                      {cat.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Sorting Dropdown */}
-              <div className="flex items-center gap-2 w-full lg:w-auto">
-                <div className="relative w-full lg:w-48">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <FaSortAmountDown className="text-gray-400" />
-                  </div>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => updateParams("sort", e.target.value)}
-                    className="block w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 text-gray-900 focus:ring-green-500 focus:border-green-500 appearance-none cursor-pointer hover:bg-white transition-colors"
-                  >
-                    <option value="relevance">Paling Relevan</option>
-                    <option value="newest">Terbaru</option>
-                    <option value="oldest">Terlama</option>
-                  </select>
-                </div>
-              </div>
-            </div>
+          <div className="flex items-center gap-3 w-full lg:w-auto border-t lg:border-t-0 pt-4 lg:pt-0 border-gray-100">
+            <FaSortAmountDown size={16} className="text-gray-400" />
+            <select
+              value={sortBy}
+              onChange={(e) => updateParams("sort", e.target.value)}
+              className="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-[#005320] focus:border-[#005320] block w-full lg:w-48 p-2.5 font-medium cursor-pointer hover:bg-white transition-colors"
+            >
+              <option value="relevance">{t("sort_relevance")}</option>
+              <option value="newest">{t("sort_newest")}</option>
+              <option value="oldest">{t("sort_oldest")}</option>
+            </select>
           </div>
         </div>
 
-        {/* CONTENT AREA */}
         <div className="space-y-6 min-h-[400px]">
+          <div className="flex justify-between items-center text-xs text-gray-500 font-medium uppercase tracking-wide ml-1">
+            <p>{t("meta_total")} {totalHits}</p>
+            {activeCategory !== 'all' && <p>{t("meta_page")} {page}</p>}
+          </div>
+
           {loading ? (
-            // Loading State
-            <div className="flex flex-col items-center justify-center py-32 opacity-70">
-              <FaSpinner className="animate-spin text-5xl text-green-600 mb-4" />
-              <p className="text-gray-500 font-medium animate-pulse">
-                Sedang mencari data...
-              </p>
+            <div className="py-24 flex flex-col items-center justify-center text-center">
+              <FaSpinner className="animate-spin text-4xl text-[#005320] mb-4" />
+              <p className="text-gray-500 font-medium">{t("loading_results")}</p>
             </div>
           ) : results.length > 0 ? (
-            // Hasil Pencarian
-            <div className="grid grid-cols-1 gap-4">
-              {results.map((item, idx) => (
+            <div className="grid gap-4">
+              {results.map((item, index) => (
                 <UniversalSearchCard
-                  // Gunakan Unique ID yang kita buat di plugin Strapi, fallback ke kombinasi ID
-                  key={item.unique_id || `${item.type}-${item.id}-${idx}`}
+                  key={`${item.type}-${item.id}-${index}`}
                   item={item}
                   locale={locale}
                 />
               ))}
             </div>
           ) : (
-            // State Kosong (404 Search)
             hasSearched && (
-              <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl border-2 border-dashed border-gray-200 text-center px-4">
-                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-6">
-                  <FaSearch className="text-3xl text-gray-400" />
+              <div className="py-24 flex flex-col items-center justify-center text-center bg-white rounded-3xl border-2 border-dashed border-gray-200">
+                <div className="bg-gray-50 p-6 rounded-full mb-4">
+                  <FaSearch className="w-12 h-12 text-gray-300" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-800 mb-2">
-                  Tidak ada hasil ditemukan
-                </h3>
-                <p className="text-gray-500 max-w-md">
-                  Maaf, kami tidak menemukan konten yang cocok dengan kata kunci
-                  <span className="font-semibold text-gray-800">
-                    {" "}
-                    "{query}"
-                  </span>
-                  .
-                  <br />
-                  Coba periksa ejaan atau gunakan kata kunci yang lebih umum.
+                <h3 className="text-xl font-bold text-gray-900 mb-2">{t("empty_title")}</h3>
+                <p className="text-gray-500 max-w-md mx-auto">
+                  {t("empty_desc", { query })}
                 </p>
                 <button
-                  onClick={() => router.push(pathname)} // Reset semua
-                  className="mt-6 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                  onClick={() => updateParams("category", "all")}
+                  className="mt-6 px-6 py-2 bg-[#005320] text-white rounded-full text-sm font-bold hover:bg-green-800 transition-colors"
                 >
-                  Bersihkan Pencarian
+                  {t("reset_filter")}
                 </button>
               </div>
             )
           )}
         </div>
 
-        {/* PAGINATION */}
-        {/* Tampilkan hanya jika hasil ada dan bukan loading */}
-        {!loading && results.length > 0 && (
-          <div className="mt-12 flex justify-center items-center gap-4 pb-12">
+        {!loading && activeCategory !== "all" && totalHits > HITS_PER_PAGE && (
+          <div className="mt-12 flex justify-center items-center gap-4">
             <button
               disabled={page === 1}
-              onClick={() => updateParams("page", String(page - 1))}
-              className="px-5 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+              onClick={() => updateParams("page", (page - 1).toString())}
+              className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 rounded-full text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-[#005320] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
             >
-              &larr; Sebelumnya
+              &larr; {t("prev_page")}
             </button>
 
-            <div className="bg-white border border-gray-300 px-4 py-2 rounded-lg shadow-sm">
-              <span className="text-sm font-medium text-gray-700">
-                Halaman <span className="text-green-600 font-bold">{page}</span>
-              </span>
+            <div className="px-4 text-sm font-bold text-gray-900">
+              {page}
             </div>
 
-            {/* Tombol Next dimatikan jika hasil kurang dari limit (asumsi habis) */}
             <button
               disabled={results.length < HITS_PER_PAGE}
-              onClick={() => updateParams("page", String(page + 1))}
-              className="px-5 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+              onClick={() => updateParams("page", (page + 1).toString())}
+              className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 rounded-full text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-[#005320] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
             >
-              Selanjutnya &rarr;
+              {t("next_page")} &rarr;
             </button>
           </div>
         )}
