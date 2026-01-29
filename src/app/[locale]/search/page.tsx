@@ -191,7 +191,7 @@ function SearchContent({ params }: { params: Promise<{ locale: string }> }) {
 
     const timeoutId = setTimeout(performSearch, 300);
     return () => clearTimeout(timeoutId);
-  }, [query, activeCategory, sortBy, page, locale, t]);
+  }, [query, activeCategory, sortBy, page, locale]);
 
   return (
     <div className="min-h-screen bg-gray-50 pt-24 pb-20">
