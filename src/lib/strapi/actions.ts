@@ -5,7 +5,6 @@ import qs from "qs";
 import { getStrapiURL } from "./utils";
 
 export async function getMoreStaff(category: string, locale: string, page: number) {
-   // Debug 1: Cek URL dasar
    const baseUrl = getStrapiURL();
    const url = new URL("/api/staff-members", baseUrl);
 
@@ -26,9 +25,6 @@ export async function getMoreStaff(category: string, locale: string, page: numbe
 
    url.search = query;
 
-   console.log(`[SERVER ACTION] Fetching Page ${page}...`);
-   console.log(`[SERVER ACTION] URL: ${url.href}`);
-
    try {
       const res = await fetch(url.href, {
          method: "GET",
@@ -37,20 +33,17 @@ export async function getMoreStaff(category: string, locale: string, page: numbe
       });
 
       if (!res.ok) {
-         console.error(`[SERVER ACTION] Error Status: ${res.status}`);
-         throw new Error(`Failed to fetch: ${res.status}`);
+         // jika API gagal
+         console.error(`[getMoreStaff] API Error: ${res.status} - ${res.statusText}`);
+         throw new Error(`Failed to fetch staff data: ${res.status}`);
       }
 
       const json = await res.json();
-
-      // Debug 2: Cek apakah data benar-benar ada
-      const itemCount = json.data?.length || 0;
-      console.log(`[SERVER ACTION] Success! Found ${itemCount} items on Page ${page}`);
-
       return json;
 
    } catch (error) {
-      console.error("[SERVER ACTION] CRITICAL ERROR:", error);
+      console.error("[getMoreStaff] CRITICAL ERROR:", error);
+      // Return struktur kosong yang aman agar UI tidak crash
       return { data: [], meta: null };
    }
 }
