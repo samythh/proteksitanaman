@@ -7,245 +7,296 @@ import PageHeader from "@/components/ui/PageHeader";
 import FacilityDetail from "@/components/sections/FacilityDetail";
 import qs from "qs";
 import { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 
 // --- TYPE DEFINITIONS ---
 
-// 1. Tipe Data Dasar (Isi Attributes Raw)
-interface FacilityBase {
-   name: string;
-   slug: string;
-   description: string;
-   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-   content?: any;
-   youtube_id?: string;
-   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-   images?: { data: any[] } | any[];
+interface StrapiImage {
+  id: number;
+  url: string;
+  alternativeText?: string;
+  caption?: string;
+  width?: number;
+  height?: number;
 }
 
-// 2. Tipe Data untuk 'data' utama (Disesuaikan dengan FacilityDetail.tsx prop 'data')
-interface NormalizedFacilityData extends Omit<FacilityBase, 'images'> {
-   id: number;
-   images?: {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      data: any[];
-   };
+interface LegacyImageFormat {
+  id: number;
+  attributes: {
+    url: string;
+    alternativeText?: string;
+    caption?: string;
+    width?: number;
+    height?: number;
+  };
 }
 
-// 3. Tipe Data untuk 'others' (Struktur Legacy/Nested sesuai prop 'others')
+interface NormalizedFacilityData {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  content?: unknown;
+  youtube_id?: string;
+  images: {
+    data: LegacyImageFormat[];
+  };
+}
+
 interface FacilityItem {
-   id: number;
-   attributes: {
-      name: string;
-      slug: string;
-      description: string;
-      images?: {
-         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-         data: any[];
-      };
-   };
+  id: number;
+  attributes: {
+    name: string;
+    slug: string;
+    description: string;
+    images: {
+      data: LegacyImageFormat[];
+    };
+  };
 }
 
-// 4. Wrapper Response API Strapi
 interface StrapiEntity {
-   id: number;
-   attributes?: FacilityBase;
-   [key: string]: unknown;
+  id: number;
+  attributes?: {
+    name?: string;
+    slug?: string;
+    description?: string;
+    content?: unknown;
+    youtube_id?: string;
+    images?: unknown;
+    Default_Hero_Image?: unknown;
+  };
+  name?: string;
+  slug?: string;
+  description?: string;
+  content?: unknown;
+  youtube_id?: string;
+  images?: unknown;
+  Default_Hero_Image?: unknown;
 }
 
 interface StrapiResponse<T> {
-   data: T;
-   meta?: Record<string, unknown>;
+  data: T;
+  meta?: Record<string, unknown>;
 }
 
-// --- HELPER: Normalisasi ---
-function getAttributes(item: StrapiEntity | null | undefined): (FacilityBase & { id: number }) | null {
-   if (!item) return null;
-   const id = item.id;
-   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-   const attrs = (item.attributes || item) as any;
-   return { id, ...attrs };
+// --- HELPER: Image Extractor ---
+function extractImages(imageData: unknown): StrapiImage[] {
+  if (!imageData) return [];
+  
+  if (typeof imageData === 'object' && 'data' in imageData && Array.isArray((imageData as { data: unknown[] }).data)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (imageData as { data: any[] }).data.map((img) => ({
+      id: img.id,
+      url: img.attributes?.url || img.url,
+      alternativeText: img.attributes?.alternativeText || img.alternativeText,
+      caption: img.attributes?.caption || img.caption,
+    }));
+  }
+
+  if (Array.isArray(imageData)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return imageData.map((img: any) => ({
+      id: img.id,
+      url: img.attributes?.url || img.url,
+      alternativeText: img.attributes?.alternativeText || img.alternativeText,
+      caption: img.attributes?.caption || img.caption,
+    }));
+  }
+
+  return [];
+}
+
+// --- HELPER: Normalisasi Data ---
+function normalizeData(item: StrapiEntity): NormalizedFacilityData | null {
+  if (!item) return null;
+  
+  const attrs = item.attributes || item;
+  const id = item.id;
+
+  // 1. Ambil data gambar bersih (Flat)
+  const cleanImages = extractImages(attrs.images);
+
+  // 2. Konversi ke Legacy Format (Nested) 
+  const legacyImages: LegacyImageFormat[] = cleanImages.map(img => ({
+    id: img.id,
+    attributes: {
+      url: img.url,
+      alternativeText: img.alternativeText,
+      caption: img.caption,
+      width: img.width,
+      height: img.height
+    }
+  }));
+
+  return {
+    id,
+    name: attrs.name || "",
+    slug: attrs.slug || "",
+    description: attrs.description || "",
+    content: attrs.content,
+    youtube_id: attrs.youtube_id,
+    images: {
+      data: legacyImages 
+    }
+  };
 }
 
 // --- 1. GENERATE STATIC PARAMS ---
 export async function generateStaticParams() {
-   try {
-      const facilityData = await fetchAPI("/facilities", {
-         fields: ["slug"],
-         pagination: { limit: 100 },
-      }) as StrapiResponse<StrapiEntity[]>;
+  try {
+    const facilityData = await fetchAPI("/facilities", {
+      fields: ["slug"],
+      pagination: { limit: 100 },
+    }) as StrapiResponse<StrapiEntity[]>;
 
-      const locales = ["id", "en"];
-      const params: { locale: string; slug: string }[] = [];
+    if (!facilityData?.data) return [];
 
-      if (!facilityData?.data) return [];
+    const locales = ["id", "en"];
+    const params: { locale: string; slug: string }[] = [];
 
-      facilityData.data.forEach((item) => {
-         const data = getAttributes(item);
-         if (data?.slug) {
-            locales.forEach((locale) => {
-               params.push({ locale, slug: data.slug });
-            });
-         }
-      });
+    facilityData.data.forEach((item) => {
+      const attrs = item.attributes || item;
+      if (attrs.slug) {
+        locales.forEach((locale) => {
+          params.push({ locale, slug: attrs.slug || "" });
+        });
+      }
+    });
 
-      return params;
-   } catch (error) {
-      console.error("Error generating params for facilities:", error);
-      return [];
-   }
+    return params;
+  } catch (error) {
+    console.error("Error generating params for facilities:", error);
+    return [];
+  }
 }
 
 // --- 2. GENERATE METADATA ---
 export async function generateMetadata({
-   params,
+  params,
 }: {
-   params: Promise<{ slug: string; locale: string }>;
+  params: Promise<{ slug: string; locale: string }>;
 }): Promise<Metadata> {
-   const { slug, locale } = await params;
+  const { slug, locale } = await params;
+  const t = await getTranslations({ locale, namespace: "FacilityDetail" });
 
-   const query = qs.stringify({
-      filters: { slug: { $eq: slug } },
-      locale,
-      fields: ['name', 'description'],
-   });
+  const query = qs.stringify({
+    filters: { slug: { $eq: slug } },
+    locale,
+    fields: ['name', 'description'],
+  }, { encodeValuesOnly: true });
 
-   const res = await fetchAPI(`/facilities?${query}`) as StrapiResponse<StrapiEntity[]>;
-   const data = getAttributes(res?.data?.[0]);
+  const res = await fetchAPI(`/facilities?${query}`) as StrapiResponse<StrapiEntity[]>;
+  const raw = res?.data?.[0];
+  const data = raw ? (raw.attributes || raw) : null;
 
-   if (!data) return { title: "Facility Not Found" };
+  if (!data) return { title: "Facility Not Found" };
 
-   return {
-      title: data.name,
-      description: data.description || `Detail fasilitas: ${data.name}`,
-   };
+  return {
+    title: data.name,
+    description: data.description || `${t('meta_desc_prefix')} ${data.name}`,
+  };
 }
 
 // --- 3. HALAMAN UTAMA ---
 export default async function FacilityDetailPage({
-   params,
+  params,
 }: {
-   params: Promise<{ slug: string; locale: string }>;
+  params: Promise<{ slug: string; locale: string }>;
 }) {
-   const { slug, locale } = await params;
+  const { slug, locale } = await params;
+  const t = await getTranslations({ locale, namespace: "FacilityDetail" });
 
-   // Init Data Containers
-   let facility: NormalizedFacilityData | null = null;
-   let otherFacilities: FacilityItem[] = [];
-   let globalHeroUrl: string | undefined = undefined;
+  let facility: NormalizedFacilityData | null = null;
+  let otherFacilities: FacilityItem[] = [];
+  let globalHeroUrl: string | undefined = undefined;
 
-   try {
-      // A. Query Detail Fasilitas
-      const queryFacility = qs.stringify({
-         filters: { slug: { $eq: slug } },
-         locale: locale,
-         populate: {
-            images: { fields: ['url', 'alternativeText', 'width', 'height'] },
-         }
+  try {
+    // A. Query
+    const queryFacility = qs.stringify({
+      filters: { slug: { $eq: slug } },
+      locale: locale,
+      populate: ["images"], 
+    }, { encodeValuesOnly: true });
+
+    const queryOthers = qs.stringify({
+      filters: { slug: { $ne: slug } },
+      locale: locale,
+      pagination: { limit: 6 },
+      sort: ["name:asc"],
+      populate: ["images"],
+    }, { encodeValuesOnly: true });
+
+    // B. Fetch
+    const [facilityRes, othersRes, globalRes] = await Promise.all([
+      fetchAPI(`/facilities?${queryFacility}`) as Promise<StrapiResponse<StrapiEntity[]>>,
+      fetchAPI(`/facilities?${queryOthers}`) as Promise<StrapiResponse<StrapiEntity[]>>,
+      fetchAPI("/global", {
+        populate: "Default_Hero_Image",
+        locale: locale,
+      }) as Promise<StrapiResponse<StrapiEntity>>,
+    ]);
+
+    // C. Process Detail
+    const rawFacility = facilityRes?.data?.[0];
+    if (rawFacility) {
+      facility = normalizeData(rawFacility);
+    }
+
+    // D. Process Others 
+    if (othersRes?.data && Array.isArray(othersRes.data)) {
+      const mappedOthers = othersRes.data.map((item): FacilityItem | null => {
+        const normalized = normalizeData(item);
+        if (!normalized) return null;
+
+        return {
+          id: normalized.id,
+          attributes: {
+            name: normalized.name,
+            slug: normalized.slug,
+            description: normalized.description,
+            images: normalized.images 
+          }
+        };
       });
 
-      // B. Query Fasilitas Lainnya
-      const queryOthers = qs.stringify({
-         filters: { slug: { $ne: slug } },
-         locale: locale,
-         pagination: { limit: 6 },
-         sort: ["name:asc"],
-         fields: ["name", "slug"],
-         populate: {
-            images: { fields: ["url"] }
-         },
-      });
+      otherFacilities = mappedOthers.filter((item): item is FacilityItem => item !== null);
+    }
 
-      // C. Fetch Parallel
-      const [facilityRes, othersRes, globalRes] = await Promise.all([
-         fetchAPI(`/facilities?${queryFacility}`) as Promise<StrapiResponse<StrapiEntity[]>>,
-         fetchAPI(`/facilities?${queryOthers}`) as Promise<StrapiResponse<StrapiEntity[]>>,
-         fetchAPI("/global", {
-            populate: "Default_Hero_Image",
-            locale: locale,
-         }) as Promise<StrapiResponse<StrapiEntity>>,
-      ]);
+    // E. Process Global Hero
+    const globalRaw = globalRes?.data;
+    if (globalRaw) {
+       const globalAttr = globalRaw.attributes || globalRaw;
+       // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       const heroData = (globalAttr.Default_Hero_Image as any); 
+       const heroUrl = heroData?.data?.attributes?.url || heroData?.url;
+       globalHeroUrl = getStrapiMedia(heroUrl) || undefined;
+    }
 
-      // D. Process Detail Data (Normalized)
-      const rawFacility = facilityRes?.data?.[0];
-      const facilityData = getAttributes(rawFacility);
+  } catch (error) {
+    console.error("[FacilityDetail] Error fetching data:", error);
+  }
 
-      if (facilityData) {
-         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-         const flatImages = (facilityData.images as any)?.data || facilityData.images || [];
+  if (!facility) return notFound();
 
-         facility = {
-            id: facilityData.id,
-            name: facilityData.name,
-            slug: facilityData.slug,
-            description: facilityData.description,
-            content: facilityData.content,
-            youtube_id: facilityData.youtube_id,
-            // Struktur yang diminta Component FacilityDetail (prop 'data'):
-            images: {
-               data: Array.isArray(flatImages) ? flatImages : []
-            }
-         };
-      }
+  const breadcrumbLabel = t('breadcrumb');
+  const sectionTitle = t('section_title');
+  const sectionSubtitle = t('section_subtitle');
 
-      // E. Process Other Data
-      if (othersRes?.data) {
-         // Ini memberitahu TypeScript bahwa kita sengaja mengembalikan null jika data invalid
-         const mappedOthers = othersRes.data.map((item): FacilityItem | null => {
-            const data = getAttributes(item);
-            if (!data) return null;
+  return (
+    <div className="bg-white min-h-screen pb-20 -mt-16 relative z-10">
+      <PageHeader
+        title={facility.name}
+        breadcrumb={breadcrumbLabel}
+        backgroundImageUrl={globalHeroUrl}
+        sectionTitle={sectionTitle}
+        sectionSubtitle={sectionSubtitle}
+      />
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const flatImages = (data.images as any)?.data || data.images || [];
-
-            return {
-               id: data.id,
-               attributes: {
-                  name: data.name,
-                  slug: data.slug,
-                  description: data.description,
-                  images: { data: Array.isArray(flatImages) ? flatImages : [] }
-               }
-            };
-         });
-
-         otherFacilities = mappedOthers.filter((item): item is FacilityItem => item !== null);
-      }
-
-      // F. Process Global Hero
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const globalRaw = globalRes?.data as any;
-      const globalAttr = globalRaw?.attributes || globalRaw;
-
-      globalHeroUrl = getStrapiMedia(
-         globalAttr?.Default_Hero_Image?.data?.attributes?.url || globalAttr?.Default_Hero_Image?.url
-      ) || undefined;
-
-   } catch (error) {
-      console.error("[FacilityDetail] Error fetching data:", error);
-   }
-
-   // Handle 404
-   if (!facility) return notFound();
-
-   // --- UI Labels ---
-   const breadcrumbLabel = locale === "en" ? "Profile / Facilities" : "Profil / Fasilitas";
-   const sectionTitle = locale === "en" ? "Facilities" : "Fasilitas";
-   const sectionSubtitle = locale === "en" ? "Department" : "Departemen";
-
-   return (
-      <div className="bg-white min-h-screen pb-20 -mt-16 relative z-10">
-         <PageHeader
-            title={facility.name}
-            breadcrumb={breadcrumbLabel}
-            backgroundImageUrl={globalHeroUrl}
-            sectionTitle={sectionTitle}
-            sectionSubtitle={sectionSubtitle}
-         />
-
-         <FacilityDetail
-            data={facility}
-            others={otherFacilities}
-         />
-      </div>
-   );
+      <FacilityDetail
+        data={facility}
+        others={otherFacilities}
+      />
+    </div>
+  );
 }

@@ -63,7 +63,11 @@
       "other_facilities": "Fasilitas Lainnya",
       "back_to_list": "Kembali ke Daftar Fasilitas",
       "video_preview": "Pratinjau Video",
-      "no_image": "Tidak ada gambar tersedia"
+      "no_image": "Tidak ada gambar tersedia",
+      "breadcrumb": "Profil / Fasilitas",
+      "section_title": "Fasilitas",
+      "section_subtitle": "Departemen",
+      "meta_desc_prefix": "Detail fasilitas:"
    },
    "AgendaPage": {
       "title_ongoing": "Sedang Berjalan",
@@ -206,5 +210,12 @@
       "reset_filter": "Reset Filter",
       "prev_page": "Sebelumnya",
       "next_page": "Selanjutnya"
+   },
+   "CurriculumSection": {
+      "lecturers_label": "Dosen Pengampu:",
+      "no_lecturers": "- Data dosen belum tersedia -",
+      "download_rps": "Unduh RPS",
+      "portfolio_btn": "Portofolio",
+      "no_courses": "Belum ada mata kuliah yang terdaftar di semester ini."
    }
 }
