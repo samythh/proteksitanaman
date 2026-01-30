@@ -8,7 +8,7 @@ export default function AccessibilityWidget() {
    const BASE_URL = "https://www.skynettechnologies.com/accessibility/js/all-in-one-accessibility-js-widget-minify.js";
    
    // Warna disesuaikan dengan Brand Identity (#005320)
-   const colorCode = "#005320"; 
+   const colorCode = "#005320";
    
    // Posisi widget (bottom_right, bottom_left, top_right, top_left)
    const position = "bottom_right";

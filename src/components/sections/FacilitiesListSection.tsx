@@ -1,12 +1,13 @@
+// File: src/components/sections/FacilitiesListSection.tsx
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { Link } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
-import { ArrowUpRight, X, ChevronDown, Image as ImageIcon, PlayCircle } from "lucide-react";
+import { ArrowUpRight, ChevronDown, Image as ImageIcon, PlayCircle } from "lucide-react";
 import { getStrapiMedia } from "@/lib/strapi/utils";
 import { cn } from "@/lib/utils/cn";
+import PosterLightBox from "@/components/ui/PosterLightBox";
 
 // --- TYPE DEFINITIONS ---
 interface StrapiImageV5 {
@@ -34,7 +35,7 @@ interface PageConfig {
 interface FacilitiesListSectionProps {
    data: {
       facilities: FacilityV5[];
-   };
+   } | null | undefined;
    config?: PageConfig | null;
    locale: string;
 }
@@ -42,11 +43,10 @@ interface FacilitiesListSectionProps {
 interface ItemProps {
    item: FacilityV5;
    index: number;
-   onImageClick: (url: string) => void;
 }
 
-// --- ITEM CARD ---
-const FacilityItemCard = ({ item, index, onImageClick }: ItemProps) => {
+// --- ITEM CARD COMPONENT ---
+const FacilityItemCard = ({ item, index }: ItemProps) => {
    const t = useTranslations("FacilitiesList");
    const { name, slug, description, youtube_id, images } = item;
 
@@ -65,7 +65,7 @@ const FacilityItemCard = ({ item, index, onImageClick }: ItemProps) => {
 
    return (
       <div className={cn(
-         "group relative flex flex-col lg:flex-row gap-8 lg:gap-16 items-center py-8 border-b border-gray-100 last:border-0",
+         "relative flex flex-col lg:flex-row gap-8 lg:gap-16 items-center py-8 border-b border-gray-100 last:border-0",
          !isEven && "lg:flex-row-reverse"
       )}>
 
@@ -79,27 +79,19 @@ const FacilityItemCard = ({ item, index, onImageClick }: ItemProps) => {
                {String(index + 1).padStart(2, '0')}
             </div>
 
-            <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white aspect-[4/3] bg-gray-100 transform transition-transform duration-500 hover:scale-[1.01] group-hover:shadow-3xl">
+            {/* MAIN COVER IMAGE */}
+            <div className="group/image relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white aspect-[4/3] bg-gray-100 transition-transform duration-500 hover:scale-[1.01] hover:shadow-3xl">
                {coverImage ? (
-                  <div
-                     className="relative w-full h-full cursor-pointer group/img"
-                     onClick={() => coverImage && onImageClick(coverImage)}
-                  >
-                     <Image
+                  <div className="relative w-full h-full">
+                     <PosterLightBox
                         src={coverImage}
                         alt={name}
-                        fill
-                        sizes="(max-width: 768px) 100vw, 50vw"
-                        className="object-cover transition-transform duration-700 group-hover/img:scale-110"
-                        onError={(e) => {
-                           if (isYoutubeThumbnail) {
-                              const target = e.target as HTMLImageElement;
-                              target.src = `https://img.youtube.com/vi/${youtube_id}/hqdefault.jpg`;
-                           }
-                        }}
+                        className="object-cover w-full h-full transition-transform duration-700 group-hover/image:scale-110"
                      />
-                     <div className="absolute inset-0 bg-black/10 group-hover/img:bg-black/20 transition-colors flex items-center justify-center">
-                        <div className="bg-white/90 backdrop-blur p-4 rounded-full shadow-lg opacity-0 group-hover/img:opacity-100 transform translate-y-4 group-hover/img:translate-y-0 transition-all duration-300">
+
+                     {/* Overlay Icon - Hanya muncul saat hover gambar */}
+                     <div className="absolute inset-0 bg-black/0 group-hover/image:bg-black/20 transition-colors flex items-center justify-center pointer-events-none">
+                        <div className="bg-white/90 backdrop-blur p-4 rounded-full shadow-lg opacity-0 translate-y-4 group-hover/image:opacity-100 group-hover/image:translate-y-0 transition-all duration-300">
                            {isYoutubeThumbnail ? (
                               <PlayCircle className="text-red-600" size={32} />
                            ) : (
@@ -116,7 +108,7 @@ const FacilityItemCard = ({ item, index, onImageClick }: ItemProps) => {
                )}
             </div>
 
-            {/* Thumbnails Gallery */}
+            {/* THUMBNAILS GALLERY */}
             {remainingImages.length > 0 && (
                <div className={cn(
                   "absolute -bottom-6 flex gap-3 z-10",
@@ -129,30 +121,31 @@ const FacilityItemCard = ({ item, index, onImageClick }: ItemProps) => {
                      return (
                         <div
                            key={img.id || idx}
-                           onClick={() => onImageClick(thumbUrl)}
-                           className="w-16 h-16 md:w-20 md:h-20 rounded-xl border-2 border-white shadow-lg overflow-hidden cursor-pointer hover:-translate-y-1 transition-transform relative bg-gray-200"
+                           className="w-16 h-16 md:w-20 md:h-20 rounded-xl border-2 border-white shadow-lg overflow-hidden relative bg-gray-200 hover:-translate-y-1 transition-transform"
                         >
-                           <Image
+                           <PosterLightBox
                               src={thumbUrl}
                               alt={img.alternativeText || `Thumb ${idx}`}
-                              fill
-                              sizes="80px"
-                              className="object-cover hover:scale-110 transition-transform"
+                              className="object-cover w-full h-full hover:scale-110 transition-transform cursor-pointer"
                            />
                         </div>
                      );
                   })}
-                  {/* Counter Badge */}
+
+                  {/* Counter Badge (+More) */}
                   {gallery.length > 4 && (
-                     <div
-                        className="w-16 h-16 md:w-20 md:h-20 rounded-xl border-2 border-white shadow-lg bg-[#005320] text-white flex flex-col items-center justify-center font-bold text-sm cursor-pointer hover:-translate-y-1 transition-transform"
-                        onClick={() => {
-                           const firstUrl = getStrapiMedia(gallery[0].url);
-                           if (firstUrl) onImageClick(firstUrl);
-                        }}
-                     >
-                        <span>+{gallery.length - 4}</span>
-                        <span className="text-[10px] font-normal opacity-80">{t("more_images")}</span>
+                     <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-xl border-2 border-white shadow-lg bg-[#005320] text-white flex flex-col items-center justify-center font-bold text-sm hover:-translate-y-1 transition-transform overflow-hidden cursor-pointer">
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
+                           <span>+{gallery.length - 4}</span>
+                           <span className="text-[10px] font-normal opacity-80">{t("more_images")}</span>
+                        </div>
+                        {getStrapiMedia(gallery[4]?.url) && (
+                           <PosterLightBox
+                              src={getStrapiMedia(gallery[4].url) as string}
+                              alt="More images"
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
+                           />
+                        )}
                      </div>
                   )}
                </div>
@@ -191,17 +184,15 @@ const FacilityItemCard = ({ item, index, onImageClick }: ItemProps) => {
    );
 };
 
-// --- MAIN COMPONENT ---
+// --- MAIN SECTION COMPONENT ---
 export default function FacilitiesListSection({ data, config }: FacilitiesListSectionProps) {
+   const t = useTranslations("FacilitiesList");
+
    const allFacilities = data?.facilities || [];
 
    const [itemsCnt, setItemsCnt] = useState(allFacilities.length);
-   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-
    const currentItems = allFacilities.slice(0, itemsCnt);
-   const t = useTranslations("FacilitiesList");
 
-   // Load more (Backup logic jika data sangat banyak nanti)
    const handleLoadMore = () => setItemsCnt((prev) => prev + 5);
 
    if (allFacilities.length === 0) return null;
@@ -213,6 +204,7 @@ export default function FacilitiesListSection({ data, config }: FacilitiesListSe
          <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-yellow-50 rounded-full blur-3xl opacity-50 translate-y-1/3 -translate-x-1/4 pointer-events-none"></div>
 
          <div className="container mx-auto max-w-7xl relative z-10">
+            {/* Header */}
             <div className="text-center max-w-3xl mx-auto mb-16 animate-in fade-in slide-in-from-bottom-4 duration-700">
                {config?.section_label && (
                   <h2 className="text-sm font-bold tracking-[0.2em] text-yellow-500 uppercase mb-3">
@@ -232,19 +224,16 @@ export default function FacilitiesListSection({ data, config }: FacilitiesListSe
                )}
             </div>
 
+            {/* List */}
             <div className="flex flex-col gap-12 md:gap-16">
                {currentItems.map((item, index) => (
                   <div key={item.id || index} className="animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-forwards" style={{ animationDelay: `${index * 100}ms` }}>
-                     <FacilityItemCard
-                        item={item}
-                        index={index}
-                        onImageClick={setSelectedImage}
-                     />
+                     <FacilityItemCard item={item} index={index} />
                   </div>
                ))}
             </div>
 
-            {/* Tombol Load More hanya muncul jika masih ada sisa data */}
+            {/* Load More Button */}
             <div className="mt-20 flex justify-center">
                {itemsCnt < allFacilities.length ? (
                   <button
@@ -258,7 +247,6 @@ export default function FacilitiesListSection({ data, config }: FacilitiesListSe
                      </span>
                   </button>
                ) : (
-                  // Indikator Akhir List
                   <div className="flex flex-col items-center gap-2 text-gray-400 opacity-70 animate-in fade-in">
                      <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
                      <span className="text-sm font-medium uppercase tracking-widest">
@@ -268,31 +256,6 @@ export default function FacilitiesListSection({ data, config }: FacilitiesListSe
                )}
             </div>
          </div>
-
-         {/* Lightbox Modal */}
-         {selectedImage && (
-            <div
-               className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300"
-               onClick={() => setSelectedImage(null)}
-            >
-               <button className="absolute top-6 right-6 text-white/70 hover:text-white hover:rotate-90 transition-all p-2 bg-white/10 rounded-full z-[10000]">
-                  <X size={32} />
-               </button>
-               <div
-                  className="relative w-full max-w-6xl h-[85vh] flex items-center justify-center"
-                  onClick={(e) => e.stopPropagation()}
-               >
-                  <Image
-                     src={selectedImage}
-                     alt="Preview"
-                     fill
-                     className="object-contain"
-                     priority
-                     sizes="100vw"
-                  />
-               </div>
-            </div>
-         )}
       </section>
    );
 }
