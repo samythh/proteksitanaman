@@ -1,3 +1,5 @@
+// File: src/app/[locale]/informasi/agenda/[slug]/page.tsx
+
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { fetchAPI } from "@/lib/strapi/fetcher";
@@ -34,11 +36,61 @@ interface AgendaDetail {
   tags?: { id: number; name: string }[];
 }
 
+interface StrapiTag {
+  id: number;
+  attributes?: { name: string };
+  name?: string;
+}
+
+interface StrapiImage {
+  data?: {
+    attributes?: {
+      url: string;
+      caption?: string;
+    };
+  };
+  url?: string;
+  caption?: string;
+}
+
+interface StrapiRawData {
+  id: number;
+  attributes?: {
+    title?: string;
+    slug?: string;
+    startDate?: string;
+    endDate?: string;
+    location?: string;
+    content?: BlocksContent;
+    description?: string;
+    image?: StrapiImage;
+    tags?: {
+      data: StrapiTag[];
+    } | StrapiTag[];
+  };
+  title?: string;
+  slug?: string;
+  startDate?: string;
+  endDate?: string;
+  location?: string;
+  content?: BlocksContent;
+  description?: string;
+  image?: StrapiImage;
+  tags?: {
+    data: StrapiTag[];
+  } | StrapiTag[];
+}
+
 // --- HELPER: DATA NORMALIZER ---
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function normalizeAgendaDetail(data: any): AgendaDetail | null {
+function normalizeAgendaDetail(data: StrapiRawData): AgendaDetail | null {
   if (!data) return null;
-  const attr = data.attributes || data;
+  
+  // Menggunakan type guard sederhana untuk menghindari 'any'
+  const attr = data.attributes ? data.attributes : data;
+
+  const rawTags = attr.tags && typeof attr.tags === 'object' && 'data' in attr.tags 
+    ? attr.tags.data 
+    : (Array.isArray(attr.tags) ? attr.tags : []);
 
   return {
     id: data.id,
@@ -51,10 +103,9 @@ function normalizeAgendaDetail(data: any): AgendaDetail | null {
     description: attr.description || "",
     image: {
       url: getStrapiMedia(attr.image?.data?.attributes?.url || attr.image?.url) || "",
-      caption: attr.image?.data?.attributes?.caption || "",
+      caption: attr.image?.data?.attributes?.caption || attr.image?.caption || "",
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    tags: (attr.tags?.data || attr.tags || []).map((t: any) => ({
+    tags: rawTags.map((t: StrapiTag) => ({
       id: t.id,
       name: t.attributes?.name || t.name || "",
     })),
@@ -65,7 +116,6 @@ function normalizeAgendaDetail(data: any): AgendaDetail | null {
 async function getData(slug: string, locale: string) {
   try {
     const [detailRes, relatedRes] = await Promise.all([
-      // A. Detail Agenda
       fetchAPI("/events", {
         filters: { slug: { $eq: slug } },
         populate: {
@@ -74,9 +124,8 @@ async function getData(slug: string, locale: string) {
         },
         locale,
       }),
-      // B. Related Agenda (Agenda Lainnya)
       fetchAPI("/events", {
-        filters: { slug: { $ne: slug } }, // Kecuali slug saat ini
+        filters: { slug: { $ne: slug } },
         populate: {
           image: { fields: ["url"] },
           tags: { populate: "*" },
@@ -87,14 +136,12 @@ async function getData(slug: string, locale: string) {
       }),
     ]);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rawDetail = (detailRes as any)?.data?.[0];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rawRelated = (relatedRes as any)?.data || [];
+    const rawDetail = (detailRes as { data: StrapiRawData[] })?.data?.[0];
+    const rawRelated = (relatedRes as { data: StrapiRawData[] })?.data || [];
 
     return {
-      agenda: normalizeAgendaDetail(rawDetail),
-      related: rawRelated.map(normalizeAgendaDetail).filter(Boolean) as AgendaDetail[],
+      agenda: rawDetail ? normalizeAgendaDetail(rawDetail) : null,
+      related: rawRelated.map((item: StrapiRawData) => normalizeAgendaDetail(item)).filter((item): item is AgendaDetail => item !== null),
     };
   } catch (error) {
     console.error("Error fetching agenda data:", error);
@@ -102,7 +149,7 @@ async function getData(slug: string, locale: string) {
   }
 }
 
-// --- 2. METADATA (Dengan Translasi JSON) ---
+// --- 2. METADATA ---
 export async function generateMetadata({
   params,
 }: {
@@ -134,7 +181,6 @@ export default async function AgendaDetailPage({
     return notFound();
   }
 
-  // Helper Format Tanggal (Tetap manual karena format Date spesifik)
   const formatDate = (dateString: string) => {
     if (!dateString) return "-";
     return new Date(dateString).toLocaleDateString(locale === "id" ? "id-ID" : "en-US", {
@@ -152,14 +198,10 @@ export default async function AgendaDetailPage({
   return (
     <div className="bg-gray-50 min-h-screen pb-20 pt-24 md:pt-32 font-sans">
 
-      {/* --- KONTEN UTAMA --- */}
       <div className="container mx-auto px-4 -mt-10 relative z-10">
         <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-visible">
 
-          {/* A. HEADER SECTION */}
           <div className="p-6 md:p-12 border-b border-gray-100 text-center bg-white rounded-t-3xl z-0 relative">
-
-            {/* Tags */}
             <div className="flex flex-wrap justify-center gap-2 mb-6">
               {agenda.tags && agenda.tags.length > 0 ? (
                 agenda.tags.map((tag) => (
@@ -178,14 +220,11 @@ export default async function AgendaDetailPage({
               )}
             </div>
 
-            {/* Title */}
             <h1 className="text-3xl md:text-5xl font-extrabold text-gray-900 leading-tight max-w-4xl mx-auto mb-8">
               {agenda.title}
             </h1>
 
-            {/* Info Bar (Date & Location) */}
             <div className="inline-flex flex-col md:flex-row items-center gap-4 md:gap-8 text-gray-600 bg-gray-50 px-8 py-4 rounded-2xl border border-gray-100 shadow-sm relative z-10">
-              {/* Date */}
               <div className="flex items-center gap-3">
                 <Calendar className="text-green-600 w-5 h-5 md:w-6 md:h-6" />
                 <div className="flex flex-col items-start text-left">
@@ -198,7 +237,6 @@ export default async function AgendaDetailPage({
                 </div>
               </div>
 
-              {/* Location */}
               {agenda.location && (
                 <>
                   <div className="hidden md:block w-px h-8 bg-gray-200"></div>
@@ -218,16 +256,12 @@ export default async function AgendaDetailPage({
             </div>
           </div>
 
-          {/* B. BADAN KONTEN */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 relative">
-
-            {/* KOLOM KIRI: POSTER (STICKY) */}
             <div className="lg:col-span-5 bg-gray-50 p-6 md:p-10 flex items-start justify-center border-r border-gray-100 rounded-bl-3xl">
               <div className="sticky top-28 w-full flex justify-center z-20">
                 <div className="relative w-full -mt-4 md:-mt-8 transition-all duration-300">
                   <div className="bg-white p-2 rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
                     <div className="relative w-full aspect-[3/4] bg-gray-50 rounded-xl overflow-hidden flex items-center justify-center">
-
                       {agenda.image?.url ? (
                         <div className="w-full h-full">
                           <PosterLightBox
@@ -243,22 +277,18 @@ export default async function AgendaDetailPage({
                           </p>
                         </div>
                       )}
-
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* KOLOM KANAN: DESKRIPSI & SHARE */}
             <div className="lg:col-span-7 p-6 md:p-12 bg-white min-h-[500px] z-10 rounded-br-3xl flex flex-col">
-
               <article className="prose prose-lg prose-green max-w-none text-gray-700 leading-relaxed prose-headings:font-bold prose-headings:text-gray-900 prose-img:rounded-xl prose-a:text-green-600 mb-12">
                 {agenda.content ? (
                   <BlocksRenderer content={agenda.content} />
                 ) : (
                   <div className="text-gray-400 italic text-center py-10 border border-dashed border-gray-200 rounded-xl">
-                    {/* ✅ Pakai JSON */}
                     <p>{t('desc_unavailable')}</p>
                   </div>
                 )}
@@ -267,22 +297,19 @@ export default async function AgendaDetailPage({
               <div className="mt-auto border-t border-gray-200 pt-6 flex justify-end">
                 <ShareButton title={agenda.title} />
               </div>
-
             </div>
           </div>
         </div>
       </div>
 
-      {/* --- FOOTER: AGENDA LAINNYA --- */}
-      <div className="container mx-auto px-4 max-w-6xl mt-16 mb-20">
+      <div className="container mx-auto px-6 md:px-16 lg:px-24 mt-20 mb-20">
+        <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-6 mb-10 border-b border-gray-200 pb-8">
+          <div className="w-full md:w-auto">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 border-l-4 border-green-600 pl-4 leading-tight">
+              {t('related_events')}
+            </h2>
+          </div>
 
-        {/* HEADER SECTION */}
-        <div className="flex flex-row justify-between items-end mb-8 gap-4 border-b border-gray-200 pb-4">
-          <h2 className="text-2xl md:text-3xl font-bold text-[#005320] border-l-4 border-yellow-400 pl-4 leading-none">
-            {t('related_events')}
-          </h2>
-
-          {/* Tombol Desktop */}
           <Link
             href={`/${locale}/informasi/agenda`}
             className="hidden md:flex items-center gap-2 text-sm font-bold text-green-700 hover:text-green-800 transition-colors bg-green-50 px-4 py-2 rounded-full hover:bg-green-100 shrink-0"
@@ -291,32 +318,28 @@ export default async function AgendaDetailPage({
           </Link>
         </div>
 
-        {/* RELATED EVENTS GRID */}
         {related.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {related.map((item) => (
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              <AgendaCard key={item.id} data={item as any} locale={locale} />
+              <AgendaCard key={item.id} data={item} locale={locale} />
             ))}
           </div>
         ) : (
-          <div className="bg-white rounded-xl p-10 text-center border border-dashed border-gray-300">
-            <p className="text-gray-500 italic">
+          <div className="bg-white rounded-2xl p-16 text-center border-2 border-dashed border-gray-200">
+            <p className="text-gray-400 text-lg italic">
               {t('no_related_events')}
             </p>
           </div>
         )}
 
-        {/* Tombol Mobile */}
-        <div className="mt-8 flex justify-center md:hidden">
+        <div className="mt-12 flex justify-center md:hidden">
           <Link
             href={`/${locale}/informasi/agenda`}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 rounded-full text-sm font-bold text-gray-700 shadow-sm hover:bg-gray-50"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-white border border-gray-200 text-gray-700 rounded-full text-sm font-bold shadow-sm"
           >
-            {t('view_all_mobile')} <ArrowLeft size={16} className="rotate-180" />
+            {t('view_all_mobile')} <ArrowLeft size={20} className="rotate-180" />
           </Link>
         </div>
-
       </div>
     </div>
   );
