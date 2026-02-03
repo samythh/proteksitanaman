@@ -1,39 +1,36 @@
 // File: src/components/AccessibilityWidget.tsx
 "use client";
 
-import Script from "next/script";
+import { useEffect } from "react";
 
 export default function AccessibilityWidget() {
-   // --- KONFIGURASI ---
-   const BASE_URL = "https://www.skynettechnologies.com/accessibility/js/all-in-one-accessibility-js-widget-minify.js";
-   
-   // Warna disesuaikan dengan Brand Identity (#005320)
-   const colorCode = "#005320";
-   
-   // Posisi widget (bottom_right, bottom_left, top_right, top_left)
-   const position = "bottom_right";
-   
-   // Token: Ambil dari .env jika ada, atau 'null' untuk versi gratis
-   const token = process.env.NEXT_PUBLIC_AIOA_TOKEN || "null";
+   useEffect(() => {
+      // 1. Cek apakah script sudah ada (mencegah duplikasi saat re-render)
+      if (document.getElementById("aioa-adawidget")) return;
 
-   // Construct URL yang bersih
-   const scriptSrc = `${BASE_URL}?colorcode=${encodeURIComponent(colorCode)}&token=${token}&position=${position}`;
+      // 2. Gunakan setTimeout untuk menunda loading selama 3 detik
+      const timer = setTimeout(() => {
+         // --- KONFIGURASI ---
+         const BASE_URL = "https://www.skynettechnologies.com/accessibility/js/all-in-one-accessibility-js-widget-minify.js";
+         const colorCode = "#005320";
+         const position = "bottom_right";
+         const token = process.env.NEXT_PUBLIC_AIOA_TOKEN || "null";
 
-   return (
-      <Script
-         id="aioa-adawidget"
-         src={scriptSrc}
-         
-         // ⚡ PERFORMANCE OPTIMIZATION
-         // lazyOnload: Script dimuat saat browser idle (tidak sibuk).
-         // Ini menjamin skor Lighthouse/PageSpeed tetap hijau (100).
-         strategy="lazyOnload"
-         
-         // 🛡️ ERROR HANDLING
-         // Berguna untuk debugging jika widget tiba-tiba tidak muncul
-         onError={(e) => {
-            console.warn("⚠️ [AccessibilityWidget] Gagal memuat script pihak ketiga:", e);
-         }}
-      />
-   ); 
+         // Membuat elemen script secara manual
+         const script = document.createElement("script");
+         script.src = `${BASE_URL}?colorcode=${encodeURIComponent(colorCode)}&token=${token}&position=${position}`;
+         script.id = "aioa-adawidget";
+         script.defer = true; // Sesuai request Anda
+
+         // Menambahkan script ke dalam body
+         document.body.appendChild(script);
+
+      }, 3000); // Delay 3000ms (3 detik)
+
+      // 3. Cleanup function (membersihkan timer jika user pindah halaman sebelum 3 detik)
+      return () => clearTimeout(timer);
+   }, []);
+
+   // Komponen ini tidak me-render elemen visual apapun di DOM, hanya logic
+   return null;
 }
