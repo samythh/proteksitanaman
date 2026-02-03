@@ -1,11 +1,11 @@
 /* File: src/app/globals.css */
 
-/* 1. Mengimpor library dasar Tailwind */
+/* 1. TAILWIND BASE SETUP */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* 2. Mendefinisikan Variabel CSS (Tema Website) */
+/* 2. CSS VARIABLES (THEMING) */
 @layer base {
   :root {
     /* --- BACKGROUND & FOREGROUND --- */
@@ -13,7 +13,6 @@
     --foreground: 240 10% 3.9%;
 
     /* --- PRIMARY COLOR (Hijau Departemen) --- */
-    /* HSL: 142.1 76.2% 36.3% = #16A34A (Green-600) */
     --primary: 142.1 76.2% 36.3%;
     --primary-foreground: 355.7 100% 97.3%;
 
@@ -27,11 +26,9 @@
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
 
-    /* --- MUTED --- */
+    /* --- MUTED & ACCENT --- */
     --muted: 240 4.8% 95.9%;
     --muted-foreground: 240 3.8% 46.1%;
-
-    /* --- ACCENT --- */
     --accent: 240 4.8% 95.9%;
     --accent-foreground: 240 5.9% 10%;
 
@@ -42,12 +39,11 @@
     /* --- BORDERS & INPUTS --- */
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
-    --ring: 142.1 76.2% 36.3%; /* Fokus warna hijau */
+    --ring: 142.1 76.2% 36.3%;
 
     --radius: 0.5rem;
   }
 
-  /* Mode Gelap (Persiapan) */
   .dark {
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
@@ -71,7 +67,7 @@
   }
 }
 
-/* 3. Menerapkan gaya dasar */
+/* 3. BASE STYLES & CUSTOM SCROLLBAR */
 @layer base {
   * {
     @apply border-border;
@@ -81,13 +77,11 @@
     @apply bg-background text-foreground;
   }
 
-  /* --- TAMBAHAN: Selection Color (Warna saat teks di-blok) --- */
   ::selection {
     background-color: hsl(var(--primary));
     color: hsl(var(--primary-foreground));
   }
 
-  /* --- TAMBAHAN: Custom Scrollbar (Webkit browsers: Chrome, Safari, Edge) --- */
   ::-webkit-scrollbar {
     width: 10px;
   }
@@ -97,23 +91,23 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #a3c2a3; /* Hijau muda pudar */
+    background: #a3c2a3;
     border-radius: 5px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--primary)); /* Hijau utama saat hover */
+    background: hsl(var(--primary));
   }
 }
 
-/* 4. LENIS SMOOTH SCROLL CSS  */
+/* 4. LENIS SMOOTH SCROLL */
 html.lenis,
 html.lenis body {
   height: auto;
 }
 
 .lenis.lenis-smooth {
-  scroll-behavior: auto !important; /* Mencegah konflik dengan scroll-behavior: smooth native */
+  scroll-behavior: auto !important;
 }
 
 .lenis.lenis-smooth [data-lenis-prevent] {
