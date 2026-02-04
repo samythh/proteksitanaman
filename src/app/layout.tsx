@@ -7,7 +7,7 @@ type Props = {
 };
 
 // Root Layout ini bertugas sebagai "Shell" atau pembungkus luar.
-// Karena kita menggunakan i18n, pengaturan HTML dan BODY akan dipindah 
+// Karena menggunakan i18n, pengaturan HTML dan BODY akan dipindah 
 // ke dalam folder [locale]/layout.tsx.
 export default function RootLayout({ children }: Props) {
   return children;

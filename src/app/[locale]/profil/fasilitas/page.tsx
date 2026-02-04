@@ -1,5 +1,3 @@
-// File: src/app/[locale]/profil/fasilitas/page.tsx
-
 import { fetchAPI } from "@/lib/strapi/fetcher";
 import FacilitiesListSection from "@/components/sections/FacilitiesListSection";
 import qs from "qs";
@@ -27,16 +25,21 @@ interface PageConfigV5 {
   description?: string;
 }
 
-interface StrapiResponse<T> {
-  data: T;
-  meta?: {
-    pagination?: {
-      total: number;
-    }
+interface PaginationMeta {
+  pagination: {
+    page: number;
+    pageSize: number;
+    pageCount: number;
+    total: number;
   }
 }
 
-// --- 1. GENERATE METADATA (SEO) ---
+interface StrapiResponse<T> {
+  data: T;
+  meta?: PaginationMeta;
+}
+
+// --- 1. GENERATE METADATA ---
 export async function generateMetadata({
   params
 }: {
@@ -66,43 +69,56 @@ export default async function FasilitasPage({
 }) {
   const { locale } = await params;
 
-  // Inisialisasi variabel data kosong
+  // --- SETTING PAGINATION ---
+  const PAGE_SIZE = 5; 
+
   let facilities: FacilityV5[] = [];
   let pageConfig: PageConfigV5 | null = null;
+  let paginationMeta = { page: 1, pageCount: 1, pageSize: PAGE_SIZE, total: 0 };
 
   try {
-    // A. Buat Query String
     const queryFacilities = qs.stringify({
       locale: locale,
       sort: ["name:asc"], 
       populate: ["images"],
-      pagination: { page: 1, pageSize: 100 }, 
+      pagination: { 
+        page: 1, 
+        pageSize: PAGE_SIZE 
+      }, 
     }, { encodeValuesOnly: true });
 
-    // B. Fetch Data (Parallel)
+    // B. Fetch Data
     const [facilitiesRes, configRes] = await Promise.all([
       fetchAPI(`/facilities?${queryFacilities}`) as Promise<StrapiResponse<FacilityV5[]>>,
       fetchAPI(`/facilities-page?locale=${locale}`) as Promise<StrapiResponse<PageConfigV5>>,
     ]);
 
-    // C. Masukkan data ke variabel
+    // C. Masukkan data
     facilities = facilitiesRes.data || [];
     pageConfig = configRes.data || null;
 
+    // D. Simpan Metadata 
+    if (facilitiesRes.meta?.pagination) {
+        paginationMeta = facilitiesRes.meta.pagination;
+    }
+
   } catch (error) {
     console.error("[FasilitasPage Error]:", error);
-    // Jika error, halaman tetap render tapi list kosong (agar tidak crash 500)
   }
 
-  // D. Render Komponen List
+  // E. Render Komponen List
   return (
     <div className="bg-white min-h-screen pt-16 md:pt-20 pb-20">
       <div className="container mx-auto px-0 relative z-10">
         
         <FacilitiesListSection
-          data={{ facilities }} 
+          initialData={facilities} 
           config={pageConfig}
           locale={locale}
+          initialMeta={{
+            page: paginationMeta.page,
+            pageCount: paginationMeta.pageCount
+          }}
         />
         
       </div>

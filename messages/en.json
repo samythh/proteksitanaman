@@ -41,6 +41,31 @@
       "hero_sr_title": "Latest News and Articles",
       "no_news_display": "No news to display at the moment."
    },
+   "Publication": {
+      "tabs": {
+         "all": "All",
+         "journal": "Journals",
+         "book": "Books",
+         "patent": "IPR & Patents",
+         "proceeding": "Proceedings"
+      },
+      "labels": {
+         "author": "Author",
+         "publisher": "Publisher",
+         "patentOwner": "Patent Owner",
+         "noImage": "NO IMAGE",
+         "openJournal": "Open Journal",
+         "viewArticle": "View Article",
+         "linkNotAvailable": "Link Unavailable",
+         "journalBadge": "Journal",
+         "proceedingBadge": "Proceeding"
+      },
+      "states": {
+         "empty": "No publications found for this category.",
+         "loading": "Loading data...",
+         "loadMore": "Load more"
+      }
+   },
    "FacilitiesPage": {
       "title": "Department Facilities",
       "breadcrumb_home": "Home",

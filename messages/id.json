@@ -25,28 +25,53 @@
       "no_news": "Tidak ada berita tersedia"
    },
    "NewsDashboard": {
-      "latest_news": "Berita Terkini",
+      "latest_news": "Berita Terbaru",
       "view_all": "Lihat Semua Berita",
       "read_more": "Baca Selengkapnya",
       "loading": "Memuat...",
-      "load_more": "Lebih Banyak Berita",
-      "no_data": "Tidak ada berita ditemukan.",
-      "end_list": "Anda sudah mencapai akhir berita.",
+      "load_more": "Muat Lebih Banyak",
+      "no_data": "Berita tidak ditemukan.",
+      "end_list": "Anda telah mencapai akhir daftar.",
       "sort_newest": "Terbaru",
       "sort_oldest": "Terlama",
       "search_placeholder": "Cari..."
    },
    "NewsPage": {
       "meta_title": "Berita & Artikel",
-      "hero_sr_title": "Berita dan Artikel Terkini",
+      "hero_sr_title": "Berita dan Artikel Terbaru",
       "no_news_display": "Belum ada berita untuk ditampilkan saat ini."
+   },
+   "Publication": {
+      "tabs": {
+         "all": "Semua",
+         "journal": "Jurnal",
+         "book": "Buku",
+         "patent": "HKI & Paten",
+         "proceeding": "Prosiding"
+      },
+      "labels": {
+         "author": "Penulis",
+         "publisher": "Penerbit",
+         "patentOwner": "Pematen",
+         "noImage": "TIDAK ADA GAMBAR",
+         "openJournal": "Buka Jurnal",
+         "viewArticle": "Lihat Artikel",
+         "linkNotAvailable": "Link Belum Tersedia",
+         "journalBadge": "Jurnal",
+         "proceedingBadge": "Prosiding"
+      },
+      "states": {
+         "empty": "Tidak ada publikasi ditemukan untuk kategori ini.",
+         "loading": "Memuat data...",
+         "loadMore": "Muat lebih banyak"
+      }
    },
    "FacilitiesPage": {
       "title": "Fasilitas Departemen",
       "breadcrumb_home": "Beranda",
       "breadcrumb_profile": "Profil",
       "breadcrumb_facilities": "Fasilitas",
-      "section_title": "Sarana & Prasarana",
+      "section_title": "Sarana Prasarana",
       "section_subtitle": "Penunjang Akademik"
    },
    "FacilitiesList": {
@@ -54,7 +79,7 @@
       "explore_btn": "Lihat Detail",
       "load_more": "Muat Lebih Banyak",
       "end_list": "Anda telah mencapai akhir daftar",
-      "no_media": "Tidak ada gambar tersedia",
+      "no_media": "Gambar tidak tersedia",
       "video_play": "Putar Video",
       "more_images": "Gambar Lainnya"
    },
@@ -63,20 +88,20 @@
       "other_facilities": "Fasilitas Lainnya",
       "back_to_list": "Kembali ke Daftar Fasilitas",
       "video_preview": "Pratinjau Video",
-      "no_image": "Tidak ada gambar tersedia",
+      "no_image": "Gambar tidak tersedia",
       "breadcrumb": "Profil / Fasilitas",
       "section_title": "Fasilitas",
       "section_subtitle": "Departemen",
       "meta_desc_prefix": "Detail fasilitas:"
    },
    "AgendaPage": {
-      "title_ongoing": "Sedang Berjalan",
+      "title_ongoing": "Sedang Berlangsung",
       "title_upcoming": "Akan Datang",
       "title_past": "Selesai",
-      "no_upcoming": "Belum ada agenda yang akan datang.",
-      "no_past": "Belum ada agenda yang selesai.",
+      "no_upcoming": "Tidak ada agenda mendatang.",
+      "no_past": "Tidak ada agenda yang selesai.",
       "view_all": "Lihat Semua",
-      "view_archive": "Lihat Semua Arsip"
+      "view_archive": "Lihat Arsip"
    },
    "AgendaDetail": {
       "date": "Tanggal",
@@ -88,8 +113,8 @@
       "back_to_list": "Kembali ke Agenda",
       "poster_unavailable": "Poster tidak tersedia",
       "desc_unavailable": "Tidak ada deskripsi rinci untuk acara ini.",
-      "no_related_events": "Tidak ada agenda lain ditemukan.",
-      "meta_desc_prefix": "Detail acara untuk"
+      "no_related_events": "Tidak ada agenda terkait ditemukan.",
+      "meta_desc_prefix": "Detail agenda untuk"
    },
    "AgendaArchive": {
       "title": "Arsip Agenda",
@@ -103,15 +128,15 @@
    "AgendaHeroSlider": {
       "status_upcoming": "Akan Datang",
       "status_finished": "Selesai",
-      "status_ongoing": "Sedang Berjalan",
-      "read_more": "Selengkapnya",
+      "status_ongoing": "Sedang Berlangsung",
+      "read_more": "Baca Selengkapnya",
       "no_image": "Tidak Ada Gambar",
       "default_tag": "Agenda"
    },
    "AgendaCard": {
       "status_upcoming": "Akan Datang",
       "status_finished": "Selesai",
-      "status_ongoing": "Sedang Berjalan",
+      "status_ongoing": "Sedang Berlangsung",
       "default_tag": "Umum",
       "poster_alt": "Poster Agenda",
       "label": "Agenda"
@@ -119,15 +144,15 @@
    "Error": {
       "retry": "Coba Lagi",
       "home": "Kembali ke Beranda",
-      "detail": "Detail Kesalahan",
+      "detail": "Detail Error",
       "not_found_title": "Halaman Tidak Ditemukan",
       "not_found_desc": "Maaf, halaman yang Anda cari tidak ada atau telah dipindahkan.",
       "server_error_title": "Terjadi Kesalahan",
-      "server_error_desc": "Kami mengalami masalah pada server kami. Silakan coba lagi nanti."
+      "server_error_desc": "Kami mengalami masalah dengan server kami. Silakan coba lagi nanti."
    },
    "Footer": {
       "address_title": "ALAMAT KAMI",
-      "contact_title": "KONTAK & SOSIAL MEDIA",
+      "contact_title": "KONTAK & MEDIA SOSIAL",
       "location_title": "LOKASI KAMI",
       "no_map": "Peta belum diatur oleh admin.",
       "no_social": "Media sosial tidak tersedia.",
@@ -158,16 +183,16 @@
    },
    "StaffCard": {
       "expertise": "Keahlian",
-      "rank": "Pangkat",
-      "nip": "NIP",
-      "no_photo": "Tidak Ada Foto",
+      "rank": "Pangkat/Gol",
+      "nip": "NIP/NRP",
+      "no_photo": "Tanpa Foto",
       "view_profile_aria": "Lihat profil {name}",
-      "banner_alt": "Latar Belakang Kartu",
+      "banner_alt": "Latar Kartu",
       "staff_alt": "Staf"
    },
    "StaffDetail": {
-      "role_academic": "Staf Akademik",
-      "role_admin": "Staf Administrasi",
+      "role_academic": "Staf Akademik (Dosen)",
+      "role_admin": "Staf Administrasi (Tendik)",
       "education": "Pendidikan",
       "back_to_list": "Kembali ke Daftar Staf",
       "email_title": "Email",
@@ -175,12 +200,12 @@
       "breadcrumb_profile": "Profil",
       "breadcrumb_staff": "Staf",
       "breadcrumb_detail": "Detail",
-      "nip": "NIP",
+      "nip": "NIP/NRP",
       "default_role_academic": "Dosen",
       "default_role_admin": "Tenaga Kependidikan",
       "staff_not_found_title": "Staf Tidak Ditemukan",
       "meta_title_suffix": "Profil",
-      "meta_desc_prefix": "Profil lengkap"
+      "meta_desc_prefix": "Profil lengkap dari"
    },
    "ArticleCard": {
       "default_category": "Berita",
@@ -195,7 +220,7 @@
       "filter_all": "Semua",
       "filter_article": "Berita & Artikel",
       "filter_event": "Agenda",
-      "filter_staff": "Dosen & Staff",
+      "filter_staff": "Dosen & Staf",
       "filter_facility": "Fasilitas",
       "filter_page": "Halaman Lain",
       "sort_relevance": "Paling Relevan",
@@ -203,10 +228,10 @@
       "sort_oldest": "Terlama",
       "meta_total": "Total Data:",
       "meta_page": "Halaman",
-      "loading_results": "Sedang mencari data...",
+      "loading_results": "Mencari data...",
       "no_title": "Tanpa Judul",
       "empty_title": "Tidak Ditemukan",
-      "empty_desc": "Maaf, kami tidak dapat menemukan hasil untuk \"{query}\" pada kategori ini. Coba kata kunci lain atau ubah filter.",
+      "empty_desc": "Maaf, kami tidak dapat menemukan hasil untuk \"{query}\" di kategori ini. Coba kata kunci lain atau ubah filter.",
       "reset_filter": "Reset Filter",
       "prev_page": "Sebelumnya",
       "next_page": "Selanjutnya"
@@ -214,8 +239,8 @@
    "CurriculumSection": {
       "lecturers_label": "Dosen Pengampu:",
       "no_lecturers": "- Data dosen belum tersedia -",
-      "download_rps": "Unduh RPS",
+      "download_rps": "Unduh RPS/Silabus",
       "portfolio_btn": "Portofolio",
-      "no_courses": "Belum ada mata kuliah yang terdaftar di semester ini."
+      "no_courses": "Belum ada mata kuliah terdaftar untuk semester ini."
    }
 }
