@@ -6,6 +6,7 @@ import { getStrapiMedia } from '@/lib/strapi/utils';
 import qs from 'qs';
 import NewsHeroSlider, { ArticleSlide } from '@/components/sections/NewsHeroSlider';
 import NewsDashboard, { NewsItem } from '@/components/sections/NewsDashboard';
+import { Metadata } from 'next';
 
 // --- TYPES ---
 interface StrapiEntity {
@@ -32,9 +33,12 @@ type Props = {
 // --- HELPERS ---
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const normalizeArticle = (item: any): NewsItem => {
+   // Handle v5 (flat) vs v4 (nested attributes)
    const attr = item.attributes || item;
+
    const coverData = attr.cover?.data?.attributes || attr.cover || null;
    const coverUrl = getStrapiMedia(coverData?.url);
+
    const catData = attr.category?.data?.attributes || attr.category || null;
 
    return {
@@ -78,7 +82,7 @@ async function getFeaturedArticles(locale: string) {
    }
 }
 
-// --- 2. FETCH ALL ---
+// --- 2. FETCH ALL (DASHBOARD) ---
 async function getAllArticles(locale: string) {
    try {
       const query = qs.stringify({
@@ -86,7 +90,7 @@ async function getAllArticles(locale: string) {
          sort: ['publishedAt:desc'],
          pagination: {
             page: 1,
-            pageSize: 15,
+            pageSize: 14,
          },
          populate: {
             cover: { fields: ['url', 'alternativeText'] },
@@ -96,44 +100,48 @@ async function getAllArticles(locale: string) {
       });
 
       const res = await fetchAPI(`/articles?${query}`) as StrapiResponse<StrapiEntity>;
-      return res?.data || [];
+      
+      return res; 
    } catch (error) {
       console.error("[NewsPage] Error fetching all articles:", error);
-      return [];
+      return { data: [], meta: undefined };
    }
 }
 
-// --- 3. METADATA (FIXED HARDCODE) ---
-export async function generateMetadata({ params }: Props) {
+// --- 3. METADATA ---
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
    const { locale } = await params;
+
    const t = await getTranslations({ locale, namespace: 'NewsPage' });
+   
    const tGlobal = await getTranslations({ locale, namespace: 'Metadata' });
 
    return {
-      title: `${t('meta_title')} - ${tGlobal('title')}`
+      title: `${t('meta_title')} - ${tGlobal('title')}`,
+      description: t('meta_description')
    };
 }
 
 // --- 4. MAIN COMPONENT ---
 export default async function NewsPage({ params }: Props) {
    const { locale } = await params;
-   const t = await getTranslations({ locale, namespace: 'NewsPage' }); // ✅ Init Translation
+   const t = await getTranslations({ locale, namespace: 'NewsPage' });
 
-   // FETCH PARALEL
-   const [featuredRaw, allRaw] = await Promise.all([
+   const [featuredRaw, allResponse] = await Promise.all([
       getFeaturedArticles(locale),
       getAllArticles(locale)
    ]);
 
-   // Normalisasi Data
    const featuredList = featuredRaw.map(normalizeArticle);
-   const allList = allRaw.map(normalizeArticle);
+   const allList = (allResponse?.data || []).map(normalizeArticle);
+   
+   const rawPagination = allResponse?.meta?.pagination;
+   const initialMeta = rawPagination ? { pagination: rawPagination } : undefined;
 
-   // LOGIKA FALLBACK SLIDER
    const heroDataRaw = featuredList.length > 0 ? featuredList : allList.slice(0, 5);
    const heroData: ArticleSlide[] = heroDataRaw as unknown as ArticleSlide[];
 
-   // Data Dashboard
+   // Data Dashboard 
    const dashboardData: NewsItem[] = allList;
 
    return (
@@ -143,7 +151,6 @@ export default async function NewsPage({ params }: Props) {
          <div className="container mx-auto px-4 mb-16">
             <h1 className="sr-only">{t('hero_sr_title')}</h1>
 
-            {/* Hero Slider */}
             {heroData.length > 0 ? (
                <section>
                   <NewsHeroSlider articles={heroData} />
@@ -159,6 +166,7 @@ export default async function NewsPage({ params }: Props) {
          <section className="w-full">
             <NewsDashboard
                initialData={dashboardData}
+               initialMeta={initialMeta} 
                locale={locale}
                isHomePage={false}
             />

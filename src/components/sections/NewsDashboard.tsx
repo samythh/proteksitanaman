@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback, useEffect, useTransition } from "react";
 import Image from "next/image";
 import { Link } from "@/i18n/routing";
 import { Calendar, ChevronRight, Filter, Loader2, ArrowRight } from "lucide-react";
 import { getStrapiMedia } from "@/lib/strapi/utils";
-import { useTranslations } from "next-intl"; 
-import qs from "qs";
+import { useTranslations } from "next-intl";
+import { getArticles } from "@/lib/strapi/actions";
 
 // --- 1. KONFIGURASI MAPPING WARNA ---
 const COLOR_MAP: Record<string, string> = {
@@ -40,19 +40,105 @@ interface NewsDashboardProps {
    initialData: NewsItem[];
    locale: string;
    isHomePage?: boolean;
+   initialMeta?: { pagination: { page: number; pageCount: number } };
 }
 
-export default function NewsDashboard({ initialData, locale, isHomePage = false }: NewsDashboardProps) {
-   //  Panggil Hook Translation
+export default function NewsDashboard({ initialData, locale, isHomePage = false, initialMeta }: NewsDashboardProps) {
    const t = useTranslations("NewsDashboard");
 
+   // --- STATE ---
    const [articles, setArticles] = useState<NewsItem[]>(initialData || []);
    const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
    const [page, setPage] = useState(1);
-   const [loading, setLoading] = useState(false);
-   const [hasMore, setHasMore] = useState(true);
 
-   // Helper: Format Tanggal
+   // Logic HasMore: Cek apakah page sekarang < total page dari server
+   const [hasMore, setHasMore] = useState(
+      initialMeta ? initialMeta.pagination.page < initialMeta.pagination.pageCount : true
+   );
+
+   const [isPending, startTransition] = useTransition();
+
+   // --- OBSERVER (SCROLL TO LOAD) ---
+   const observer = useRef<IntersectionObserver | null>(null);
+
+   const lastArticleRef = useCallback(
+      (node: HTMLDivElement) => {
+         if (isPending) return;
+
+         if (observer.current) observer.current.disconnect();
+
+         observer.current = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting && hasMore) {
+               setPage((prevPage) => prevPage + 1);
+            }
+         });
+
+         if (node) observer.current.observe(node);
+      },
+      [isPending, hasMore]
+   );
+
+   // --- FETCH DATA ACTION ---
+   const loadNewsData = (pageNum: number, sort: "desc" | "asc", append: boolean) => {
+      startTransition(async () => {
+         const sortParam = sort === 'desc' ? 'newest' : 'oldest';
+
+         // Panggil Server Action
+         const res = await getArticles(pageNum, "", sortParam, locale);
+
+         if (res.data) {
+            const newArticles = res.data as NewsItem[];
+
+            setArticles((prev) => {
+               if (append) {
+                  // Logic Append: Filter duplikat ID
+                  const uniqueNew = newArticles.filter(
+                     (newItem) => !prev.some((existing) => existing.id === newItem.id)
+                  );
+                  return [...prev, ...uniqueNew];
+               } else {
+                  // Logic Replace: Ganti total saat sorting berubah
+                  return newArticles;
+               }
+            });
+
+            // Update status hasMore dari meta response terbaru
+            if (res.meta?.pagination) {
+               const { page: currentPage, pageCount } = res.meta.pagination;
+               setHasMore(currentPage < pageCount);
+            } else {
+               setHasMore(false);
+            }
+         } else {
+            // Jika error atau data kosong
+            if (!append) setArticles([]);
+            setHasMore(false);
+         }
+      });
+   };
+
+   useEffect(() => {
+      if (page > 1) {
+         loadNewsData(page, sortOrder, true);
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+   }, [page]);
+
+   const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const newSort = e.target.value as "desc" | "asc";
+
+      setSortOrder(newSort);
+      setPage(1);
+      setHasMore(true);
+
+      if (typeof window !== 'undefined') {
+         window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      loadNewsData(1, newSort, false);
+   };
+
+   // --- HELPERS ---
    const formatDate = (dateString: string) => {
       if (!dateString) return "-";
       return new Date(dateString).toLocaleDateString(locale === "en" ? "en-US" : "id-ID", {
@@ -62,102 +148,13 @@ export default function NewsDashboard({ initialData, locale, isHomePage = false 
       });
    };
 
-   // Helper: Warna Kategori
    const getCategoryStyle = (colorName?: string) => {
       const bg = COLOR_MAP[colorName || ""] || DEFAULT_COLOR;
       const text = colorName === "Pastel-Yellow" ? "text-black" : "text-white";
       return { backgroundColor: bg, className: text };
    };
 
-   // --- FETCH DATA (Logic Aman & Anti-Duplikat) ---
-   const fetchNews = async (pageNum: number, sort: "desc" | "asc", append: boolean) => {
-      setLoading(true);
-      try {
-         const pageSize = 5;
-         const query = qs.stringify({
-            locale,
-            sort: sort === 'desc' ? ['publishedAt:desc'] : ['publishedAt:asc'],
-            pagination: { page: pageNum, pageSize },
-            populate: {
-               cover: { fields: ["url"] },
-               category: { fields: ["name", "color"] },
-            },
-            fields: ["title", "slug", "publishedAt", "excerpt"],
-         }, { encodeValuesOnly: true });
-
-         const res = await fetch(`${process.env.NEXT_PUBLIC_STRAPI_API_URL}/api/articles?${query}`);
-
-         if (!res.ok) {
-            if (res.status === 404) {
-               setHasMore(false);
-               return;
-            }
-            throw new Error("Failed to fetch");
-         }
-
-         const json = await res.json();
-         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-         const rawData = json.data as any[];
-
-         // Normalisasi Data Baru
-         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-         const newArticles: NewsItem[] = rawData.map((item: any) => {
-            const attr = item.attributes || item;
-            const coverData = attr.cover?.data?.attributes || attr.cover || null;
-            const coverUrl = coverData?.url || "";
-            const catData = attr.category?.data?.attributes || attr.category || null;
-
-            return {
-               id: item.id,
-               title: attr.title || "",
-               slug: attr.slug || "",
-               publishedAt: attr.publishedAt,
-               excerpt: attr.excerpt || "",
-               cover: { url: coverUrl },
-               category: catData ? {
-                  name: catData.name,
-                  color: catData.color
-               } : undefined
-            };
-         });
-
-         if (newArticles.length < pageSize) setHasMore(false);
-
-         setArticles(prev => {
-            if (append) {
-               // FILTER DUPLIKASI
-               const uniqueNewArticles = newArticles.filter(
-                  newItem => !prev.some(existingItem => existingItem.id === newItem.id)
-               );
-               return [...prev, ...uniqueNewArticles];
-            } else {
-               return newArticles;
-            }
-         });
-
-      } catch (error) {
-         console.error("News Load Error:", error);
-         setHasMore(false);
-      } finally {
-         setLoading(false);
-      }
-   };
-
-   const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-      const newSort = e.target.value as "desc" | "asc";
-      setSortOrder(newSort);
-      setPage(1);
-      setHasMore(true);
-      fetchNews(1, newSort, false);
-   };
-
-   const handleLoadMore = () => {
-      const nextPage = page + 1;
-      setPage(nextPage);
-      fetchNews(nextPage, sortOrder, true);
-   };
-
-   // Slicing Data
+   // --- SLICING DATA ---
    const mainNews = articles[0];
    const sideNews = articles.slice(1, 5);
    const gridNews = articles.slice(5);
@@ -185,7 +182,8 @@ export default function NewsDashboard({ initialData, locale, isHomePage = false 
                      <select
                         value={sortOrder}
                         onChange={handleSortChange}
-                        className="bg-transparent text-sm font-semibold text-gray-700 focus:outline-none cursor-pointer"
+                        disabled={isPending}
+                        className="bg-transparent text-sm font-semibold text-gray-700 focus:outline-none cursor-pointer disabled:opacity-50"
                      >
                         <option value="desc">{t('sort_newest')}</option>
                         <option value="asc">{t('sort_oldest')}</option>
@@ -194,19 +192,17 @@ export default function NewsDashboard({ initialData, locale, isHomePage = false 
                )}
             </div>
 
-            {articles.length === 0 && !loading ? (
+            {articles.length === 0 && !isPending ? (
                <div className="text-center py-10 text-gray-500 italic">{t('no_data')}</div>
             ) : (
                <>
-                  {/* DASHBOARD LAYOUT */}
+                  {/* === LAYOUT UTAMA === */}
                   {mainNews && (
                      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-10 items-stretch">
 
-                        {/* 1. BERITA UTAMA (BESAR)  */}
+                        {/* MAIN NEWS */}
                         <Link href={`/informasi/berita/${mainNews.slug}`} className="lg:col-span-3 group/main h-full">
                            <div className="bg-[#749F74] p-4 md:p-5 rounded-2xl overflow-hidden shadow-lg transition-transform duration-300 hover:shadow-xl hover:-translate-y-1 h-full flex flex-col border border-[#749F74]">
-
-                              {/* Image Container */}
                               <div className="relative w-full aspect-video shrink-0 rounded-xl overflow-hidden mb-4">
                                  <Image
                                     src={getStrapiMedia(mainNews.cover.url) || ""}
@@ -214,23 +210,17 @@ export default function NewsDashboard({ initialData, locale, isHomePage = false 
                                     fill
                                     className="object-cover transition-transform duration-700 group-hover/main:scale-105"
                                  />
-
-                                 {/* Category Badge */}
                                  <span
                                     className={`absolute top-3 left-3 px-3 py-1 rounded text-xs font-bold shadow-md ${getCategoryStyle(mainNews.category?.color).className}`}
                                     style={{ backgroundColor: getCategoryStyle(mainNews.category?.color).backgroundColor }}
                                  >
                                     {mainNews.category?.name || "News"}
                                  </span>
-
-                                 {/* Date Badge */}
                                  <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-sm text-white px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium flex items-center gap-2 shadow-sm border border-white/10">
                                     <Calendar size={14} />
                                     <span>{formatDate(mainNews.publishedAt)}</span>
                                  </div>
                               </div>
-
-                              {/* Content Container */}
                               <div className="flex flex-col flex-grow">
                                  <h3 className="text-xl md:text-2xl font-bold text-white mb-2 leading-tight group-hover/main:text-green-100 transition-colors">
                                     {mainNews.title}
@@ -244,7 +234,7 @@ export default function NewsDashboard({ initialData, locale, isHomePage = false 
                            </div>
                         </Link>
 
-                        {/* 2. LIST BERITA SAMPING */}
+                        {/* SIDE NEWS */}
                         <div className="lg:col-span-2 flex flex-col gap-4 h-full">
                            {sideNews.map((item) => (
                               <Link
@@ -252,7 +242,6 @@ export default function NewsDashboard({ initialData, locale, isHomePage = false 
                                  href={`/informasi/berita/${item.slug}`}
                                  className="group flex gap-4 bg-white p-3 rounded-xl hover:bg-green-50 border border-gray-100 hover:border-green-200 hover:shadow-md transition-all items-start shadow-sm"
                               >
-                                 {/* Thumbnail Kecil */}
                                  <div className="relative w-32 h-24 shrink-0 rounded-lg overflow-hidden">
                                     <Image
                                        src={getStrapiMedia(item.cover.url) || ""}
@@ -261,12 +250,10 @@ export default function NewsDashboard({ initialData, locale, isHomePage = false 
                                        className="object-cover group-hover:scale-110 transition-transform duration-300"
                                     />
                                  </div>
-
                                  <div className="flex flex-col w-full h-full justify-between py-0.5">
                                     <h4 className="text-base font-bold text-gray-800 line-clamp-2 leading-snug group-hover:text-[#005320] transition-colors mb-1">
                                        {item.title}
                                     </h4>
-
                                     <div className="flex flex-wrap items-center gap-2 mt-auto">
                                        <span
                                           className={`px-2 py-1 rounded text-[10px] font-bold ${getCategoryStyle(item.category?.color).className}`}
@@ -274,7 +261,6 @@ export default function NewsDashboard({ initialData, locale, isHomePage = false 
                                        >
                                           {item.category?.name || "News"}
                                        </span>
-
                                        <div className="bg-gray-50 text-gray-600 px-2 py-1 rounded text-[10px] font-semibold flex items-center gap-1 border border-gray-200">
                                           <Calendar size={10} />
                                           {formatDate(item.publishedAt)}
@@ -287,53 +273,58 @@ export default function NewsDashboard({ initialData, locale, isHomePage = false 
                      </div>
                   )}
 
-                  {/* 3. GRID BERITA BAWAH (Hanya jika BUKAN Homepage)  */}
+                  {/* === GRID BERITA BAWAH (SCROLL TARGET) === */}
                   {!isHomePage && gridNews.length > 0 && (
                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                        {gridNews.map((item) => (
-                           <Link
-                              key={item.id}
-                              href={`/informasi/berita/${item.slug}`}
-                              className="group flex flex-col bg-white rounded-xl overflow-hidden hover:shadow-lg transition-all border border-gray-100 h-full shadow-sm"
-                           >
-                              <div className="relative w-full aspect-video overflow-hidden">
-                                 <Image
-                                    src={getStrapiMedia(item.cover.url) || ""}
-                                    alt={item.title}
-                                    fill
-                                    className="object-cover group-hover:scale-105 transition-transform duration-500"
-                                 />
-                                 <span
-                                    className={`absolute top-2 left-2 px-2 py-1 rounded text-[10px] font-bold shadow-sm ${getCategoryStyle(item.category?.color).className}`}
-                                    style={{ backgroundColor: getCategoryStyle(item.category?.color).backgroundColor }}
-                                 >
-                                    {item.category?.name || "News"}
-                                 </span>
+                        {gridNews.map((item, index) => {
+                           const isLastItem = gridNews.length === index + 1;
+
+                           return (
+                              <div
+                                 key={`${item.id}-${index}`}
+                                 ref={isLastItem ? lastArticleRef : null} 
+                                 className="group flex flex-col bg-white rounded-xl overflow-hidden hover:shadow-lg transition-all border border-gray-100 h-full shadow-sm"
+                              >
+                                 <Link href={`/informasi/berita/${item.slug}`} className="flex flex-col h-full">
+                                    <div className="relative w-full aspect-video overflow-hidden">
+                                       <Image
+                                          src={getStrapiMedia(item.cover.url) || ""}
+                                          alt={item.title}
+                                          fill
+                                          className="object-cover group-hover:scale-105 transition-transform duration-500"
+                                       />
+                                       <span
+                                          className={`absolute top-2 left-2 px-2 py-1 rounded text-[10px] font-bold shadow-sm ${getCategoryStyle(item.category?.color).className}`}
+                                          style={{ backgroundColor: getCategoryStyle(item.category?.color).backgroundColor }}
+                                       >
+                                          {item.category?.name || "News"}
+                                       </span>
+                                    </div>
+                                    <div className="p-4 flex flex-col flex-grow">
+                                       <div className="flex items-center gap-2 text-gray-400 text-xs mb-2">
+                                          <Calendar size={12} />
+                                          <span>{formatDate(item.publishedAt)}</span>
+                                       </div>
+                                       <h4 className="text-lg font-bold text-gray-800 mb-2 line-clamp-2 group-hover:text-[#005320] transition-colors">
+                                          {item.title}
+                                       </h4>
+                                       <p className="text-gray-600 text-sm line-clamp-3 mb-4 flex-grow">
+                                          {item.excerpt}
+                                       </p>
+                                       <span className="text-[#005320] text-sm font-bold flex items-center gap-1 mt-auto">
+                                          {t('read_more')} <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                                       </span>
+                                    </div>
+                                 </Link>
                               </div>
-                              <div className="p-4 flex flex-col flex-grow">
-                                 <div className="flex items-center gap-2 text-gray-400 text-xs mb-2">
-                                    <Calendar size={12} />
-                                    <span>{formatDate(item.publishedAt)}</span>
-                                 </div>
-                                 <h4 className="text-lg font-bold text-gray-800 mb-2 line-clamp-2 group-hover:text-[#005320] transition-colors">
-                                    {item.title}
-                                 </h4>
-                                 <p className="text-gray-600 text-sm line-clamp-3 mb-4 flex-grow">
-                                    {item.excerpt}
-                                 </p>
-                                 <span className="text-[#005320] text-sm font-bold flex items-center gap-1 mt-auto">
-                                    {t('read_more')} <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                                 </span>
-                              </div>
-                           </Link>
-                        ))}
+                           );
+                        })}
                      </div>
                   )}
 
-                  {/* FOOTER ACTIONS */}
-                  <div className="mt-8 flex w-full">
+                  {/* === LOADING & END STATE === */}
+                  <div className="mt-8 flex justify-center w-full">
                      {isHomePage ? (
-                        // BUTTON MOBILE ONLY (DI TENGAH)
                         <div className="w-full flex justify-center md:hidden">
                            <Link
                               href={`/informasi/berita`}
@@ -343,39 +334,22 @@ export default function NewsDashboard({ initialData, locale, isHomePage = false 
                            </Link>
                         </div>
                      ) : (
-                        // LOAD MORE BUTTON
-                        hasMore && (
-                           <div className="w-full flex justify-center py-2 relative">
-                              <div className="absolute inset-0 flex items-center pointer-events-none">
-                                 <div className="w-full border-t border-gray-200"></div>
+                        <>
+                           {isPending && (
+                              <div className="flex items-center gap-2 text-[#005320] font-bold py-4">
+                                 <Loader2 size={24} className="animate-spin" />
+                                 <span>{t('loading')}...</span>
                               </div>
-                              <button
-                                 onClick={handleLoadMore}
-                                 disabled={loading}
-                                 className="relative z-10 flex items-center gap-2 px-6 py-2 bg-white border-2 border-[#005320] text-[#005320] hover:bg-[#005320] hover:text-white rounded-full font-bold text-xs md:text-sm transition-all duration-300 group disabled:opacity-70 disabled:cursor-not-allowed shadow-sm"
-                              >
-                                 {loading ? (
-                                    <>
-                                       <Loader2 size={14} className="animate-spin" />
-                                       {t('loading')}
-                                    </>
-                                 ) : (
-                                    <>
-                                       {t('load_more')}
-                                       <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                                    </>
-                                 )}
-                              </button>
-                           </div>
-                        )
+                           )}
+
+                           {!hasMore && gridNews.length > 0 && (
+                              <p className="text-center text-gray-400 text-xs mt-4 italic">
+                                 -- {t('end_list')} --
+                              </p>
+                           )}
+                        </>
                      )}
                   </div>
-
-                  {!hasMore && gridNews.length > 0 && !isHomePage && (
-                     <p className="text-center text-gray-400 text-xs mt-4 italic">
-                        -- {t('end_list')} --
-                     </p>
-                  )}
                </>
             )}
          </div>

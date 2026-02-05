@@ -38,6 +38,7 @@
    },
    "NewsPage": {
       "meta_title": "Berita & Artikel",
+      "meta_description": "Temukan berita terbaru, riset, dan kegiatan dari Departemen Proteksi Tanaman.",
       "hero_sr_title": "Berita dan Artikel Terbaru",
       "no_news_display": "Belum ada berita untuk ditampilkan saat ini."
    },
