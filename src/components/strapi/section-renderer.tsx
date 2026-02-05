@@ -7,13 +7,21 @@ import { getStrapiMedia } from "@/lib/strapi/utils";
 import HeroSlider from "@/components/sections/HeroSlider";
 import QuickAccess from "@/components/sections/QuickAccess";
 import VideoProfile, { VideoSlide } from "@/components/sections/VideoProfile";
-import WelcomeSection, { WelcomeProfileData } from "@/components/sections/WelcomeSection";
+import WelcomeSection, {
+  WelcomeProfileData,
+} from "@/components/sections/WelcomeSection";
 import StatsSection, { StatItemData } from "@/components/sections/StatsSection";
-import AccreditationSection, { CertificateItemData } from "@/components/sections/AccreditationSection";
+import AccreditationSection, {
+  CertificateItemData,
+} from "@/components/sections/AccreditationSection";
 import NewsDashboard, { NewsItem } from "@/components/sections/NewsDashboard";
-import PartnershipSection, { PartnerItemData } from "@/components/sections/PartnershipSection";
+import PartnershipSection, {
+  PartnerItemData,
+} from "@/components/sections/PartnershipSection";
 import VisitorStats from "@/components/sections/VisitorStats";
-import OtherLinkSection, { LinkItemData } from "@/components/sections/OtherLinkSection";
+import OtherLinkSection, {
+  LinkItemData,
+} from "@/components/sections/OtherLinkSection";
 import FAQSection from "@/components/sections/FAQSection";
 import PageHeader from "@/components/ui/PageHeader";
 import RichText from "@/components/sections/RichText";
@@ -33,175 +41,216 @@ import PublicationSection from "@/components/sections/PublicationSection";
 import { Agenda } from "@/types/agenda";
 
 interface GlobalData {
-   articles?: NewsItem[];
-   locale?: string;
-   globalHeroUrl?: string;
-   latestEvents?: Agenda[];
-   allFacilities?: any[];
+  articles?: NewsItem[];
+  locale?: string;
+  globalHeroUrl?: string;
+  latestEvents?: Agenda[];
+  allFacilities?: any[];
 }
 
 interface SectionRendererProps {
-   sections: any[];
-   globalData?: GlobalData;
+  sections: any[];
+  globalData?: GlobalData;
 }
 
-export default function SectionRenderer({ sections, globalData }: SectionRendererProps) {
-   if (!sections) return null;
+export default function SectionRenderer({
+  sections,
+  globalData,
+}: SectionRendererProps) {
+  if (!sections) return null;
 
-   return sections.map((section: any, index: number) => {
-      switch (section.__component) {
-         // LAYOUT
-         case "layout.page-header": {
-            const specificImg = section.backgroundImage?.url || section.backgroundImage?.data?.attributes?.url;
-            const finalBg = specificImg || globalData?.globalHeroUrl;
+  return sections.map((section: any, index: number) => {
+    switch (section.__component) {
+      // LAYOUT
+      case "layout.page-header": {
+        const specificImg =
+          section.backgroundImage?.url ||
+          section.backgroundImage?.data?.attributes?.url;
+        const finalBg = specificImg || globalData?.globalHeroUrl;
 
-            return (
-               <PageHeader
-                  key={index}
-                  title={section.title}
-                  breadcrumb={section.breadcrumb}
-                  backgroundImageUrl={finalBg}
-                  sectionTitle={section.sectionTitle}
-                  sectionSubtitle={section.sectionSubtitle}
-               />
-            );
-         }
-
-         case "sections.rich-text":
-         case "layout.rich-text":
-            return <RichText key={index} data={{ content: section.content }} />;
-
-         // MEDIA
-         case "sections.image-section":
-            return <ImageSection key={index} data={section} />;
-         case "sections.video-section":
-            return <VideoSection key={index} data={section} />;
-         case "sections.gallery-section":
-            return <GallerySection key={index} data={section} />;
-         case "sections.document-section":
-            return <DocumentSection key={index} data={section} />;
-         case "sections.publication-section":
-            return <PublicationSection key={index} data={section} />;
-
-         // LISTS
-         case "sections.feature-list-section":
-            return <FeatureListSection key={index} data={section} />;
-         case "sections.profile-grid-section":
-            return <ProfileGridSection key={index} data={section} />;
-         case "sections.curriculum-section":
-            return <CurriculumSection key={index} data={section} />;
-         case "sections.visi-misi-section":
-            return <VisiMisiSection key={index} data={section} />;
-         case "sections.leaders-section":
-            return <LeadersSection key={index} data={section} />;
-         case "sections.facilities-list-section":
-            return <FacilitiesListSection key={index} data={section} locale={globalData?.locale || "id"} />;
-
-         // DYNAMIC
-         case "sections.news-dashboard":
-         case "sections.news-section":
-            return (
-               <NewsDashboard
-                  key={index}
-                  initialData={globalData?.articles || []}
-                  locale={globalData?.locale || "id"}
-                  isHomePage={true}
-               />
-            );
-
-         case "sections.agenda-preview":
-            return (
-               <AgendaPreview
-                  key={index}
-                  data={section}
-                  events={globalData?.latestEvents || []}
-                  locale={globalData?.locale || "id"}
-               />
-            );
-
-         // SLIDERS & OTHERS
-         case "sections.hero-slider":
-            return <HeroSlider key={index} data={section} />;
-         case "sections.quick-access":
-            return <QuickAccess key={index} data={section} />;
-
-         case "sections.video-profile": {
-            const videoSlides: VideoSlide[] = section.slides.map((item: any) => ({
-               id: item.id,
-               header: item.header,
-               description: item.description,
-               videoTitle: item.video_title,
-               videoUrl: getStrapiMedia(item.video_file?.url) || "",
-               youtubeId: item.youtube_id || ""
-            }));
-            return <VideoProfile key={index} data={videoSlides} />;
-         }
-
-         case "sections.welcome-section": {
-            const welcomeProfiles: WelcomeProfileData[] = section.profiles.map((item: any) => ({
-               id: item.id,
-               name: item.name,
-               role: item.role,
-               description: item.description,
-               imageUrl: getStrapiMedia(item.image?.url) || ""
-            }));
-            return <WelcomeSection key={index} data={welcomeProfiles} />;
-         }
-
-         case "sections.stats": {
-            const statsData: StatItemData[] = section.items.map((item: any) => ({
-               id: item.id,
-               label: item.label,
-               value: item.value,
-               iconUrl: getStrapiMedia(item.icon?.url) || "",
-            }));
-            return <StatsSection key={index} title={section.title} data={statsData} />;
-         }
-
-         case "sections.accreditation": {
-            const certData: CertificateItemData[] = section.certificates.map((item: any) => ({
-               id: item.id,
-               title: item.title,
-               imageUrl: getStrapiMedia(item.image?.url) || ""
-            }));
-            return <AccreditationSection key={index} title={section.title} data={certData} />;
-         }
-
-         case "sections.partnership": {
-            const partnershipData: PartnerItemData[] = (section.items || []).map((item: any) => ({
-               id: item.id,
-               name: item.name,
-               logoUrl: getStrapiMedia(item.logo?.url) || ""
-            }));
-            return <PartnershipSection key={index} title={section.title} data={partnershipData} />;
-         }
-
-         case "sections.visitor-stats": {
-            const visitorStatsData = {
-               ...section,
-               backgroundPatternUrl: getStrapiMedia(section.background_pattern?.url) || ""
-            };
-            return <VisitorStats key={index} data={visitorStatsData} />;
-         }
-
-         case "sections.other-link-section": {
-            const linkData: LinkItemData[] = (section.items || []).map((item: any) => ({
-               id: item.id,
-               title: item.title,
-               url: item.url,
-               imageUrl: getStrapiMedia(item.image?.url) || ""
-            }));
-            return <OtherLinkSection key={index} title={section.title} data={linkData} />;
-         }
-
-         case "sections.faq-section":
-            return <FAQSection key={index} data={section} />;
-
-         default:
-            if (process.env.NODE_ENV === 'development') {
-               console.warn(`⚠️ [SectionRenderer] Unhandled component type: "${section.__component}"`);
-            }
-            return null;
+        return (
+          <PageHeader
+            key={index}
+            title={section.title}
+            breadcrumb={section.breadcrumb}
+            backgroundImageUrl={finalBg}
+            sectionTitle={section.sectionTitle}
+            sectionSubtitle={section.sectionSubtitle}
+          />
+        );
       }
-   });
+
+      case "sections.rich-text":
+      case "layout.rich-text":
+        return <RichText key={index} data={{ content: section.content }} />;
+
+      // MEDIA
+      case "sections.image-section":
+        return <ImageSection key={index} data={section} />;
+      case "sections.video-section":
+        return <VideoSection key={index} data={section} />;
+      case "sections.gallery-section":
+        return <GallerySection key={index} data={section} />;
+      case "sections.document-section":
+        return <DocumentSection key={index} data={section} />;
+      case "sections.publication-section":
+        return (
+          <PublicationSection key={index} data={section} {...({} as any)} />
+        );
+
+      // LISTS
+      case "sections.feature-list-section":
+        return <FeatureListSection key={index} data={section} />;
+      case "sections.profile-grid-section":
+        return <ProfileGridSection key={index} data={section} />;
+      case "sections.curriculum-section":
+        return <CurriculumSection key={index} data={section} />;
+      case "sections.visi-misi-section":
+        return <VisiMisiSection key={index} data={section} />;
+      case "sections.leaders-section":
+        return <LeadersSection key={index} data={section} />;
+      case "sections.facilities-list-section":
+        return (
+          <FacilitiesListSection
+            key={index}
+            data={section}
+            {...({} as any)}
+            locale={globalData?.locale || "id"}
+          />
+        );
+
+      // DYNAMIC
+      case "sections.news-dashboard":
+      case "sections.news-section":
+        return (
+          <NewsDashboard
+            key={index}
+            initialData={globalData?.articles || []}
+            locale={globalData?.locale || "id"}
+            isHomePage={true}
+          />
+        );
+
+      case "sections.agenda-preview":
+        return (
+          <AgendaPreview
+            key={index}
+            data={section}
+            events={globalData?.latestEvents || []}
+            locale={globalData?.locale || "id"}
+          />
+        );
+
+      // SLIDERS & OTHERS
+      case "sections.hero-slider":
+        return <HeroSlider key={index} data={section} />;
+      case "sections.quick-access":
+        return <QuickAccess key={index} data={section} />;
+
+      case "sections.video-profile": {
+        const videoSlides: VideoSlide[] = section.slides.map((item: any) => ({
+          id: item.id,
+          header: item.header,
+          description: item.description,
+          videoTitle: item.video_title,
+          videoUrl: getStrapiMedia(item.video_file?.url) || "",
+          youtubeId: item.youtube_id || "",
+        }));
+        return <VideoProfile key={index} data={videoSlides} />;
+      }
+
+      case "sections.welcome-section": {
+        const welcomeProfiles: WelcomeProfileData[] = section.profiles.map(
+          (item: any) => ({
+            id: item.id,
+            name: item.name,
+            role: item.role,
+            description: item.description,
+            imageUrl: getStrapiMedia(item.image?.url) || "",
+          }),
+        );
+        return <WelcomeSection key={index} data={welcomeProfiles} />;
+      }
+
+      case "sections.stats": {
+        const statsData: StatItemData[] = section.items.map((item: any) => ({
+          id: item.id,
+          label: item.label,
+          value: item.value,
+          iconUrl: getStrapiMedia(item.icon?.url) || "",
+        }));
+        return (
+          <StatsSection key={index} title={section.title} data={statsData} />
+        );
+      }
+
+      case "sections.accreditation": {
+        const certData: CertificateItemData[] = section.certificates.map(
+          (item: any) => ({
+            id: item.id,
+            title: item.title,
+            imageUrl: getStrapiMedia(item.image?.url) || "",
+          }),
+        );
+        return (
+          <AccreditationSection
+            key={index}
+            title={section.title}
+            data={certData}
+          />
+        );
+      }
+
+      case "sections.partnership": {
+        const partnershipData: PartnerItemData[] = (section.items || []).map(
+          (item: any) => ({
+            id: item.id,
+            name: item.name,
+            logoUrl: getStrapiMedia(item.logo?.url) || "",
+          }),
+        );
+        return (
+          <PartnershipSection
+            key={index}
+            title={section.title}
+            data={partnershipData}
+          />
+        );
+      }
+
+      case "sections.visitor-stats": {
+        const visitorStatsData = {
+          ...section,
+          backgroundPatternUrl:
+            getStrapiMedia(section.background_pattern?.url) || "",
+        };
+        return <VisitorStats key={index} data={visitorStatsData} />;
+      }
+
+      case "sections.other-link-section": {
+        const linkData: LinkItemData[] = (section.items || []).map(
+          (item: any) => ({
+            id: item.id,
+            title: item.title,
+            url: item.url,
+            imageUrl: getStrapiMedia(item.image?.url) || "",
+          }),
+        );
+        return (
+          <OtherLinkSection key={index} title={section.title} data={linkData} />
+        );
+      }
+
+      case "sections.faq-section":
+        return <FAQSection key={index} data={section} />;
+
+      default:
+        if (process.env.NODE_ENV === "development") {
+          console.warn(
+            `⚠️ [SectionRenderer] Unhandled component type: "${section.__component}"`,
+          );
+        }
+        return null;
+    }
+  });
 }
