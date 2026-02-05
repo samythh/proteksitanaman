@@ -17,7 +17,6 @@ export default function PosterLightBox({ src, alt, className }: PosterLightBoxPr
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  // Pastikan namespace "UI" ada di file messages (en.json/id.json)
   const t = useTranslations("UI");
 
   // 1. Handle Hydration (Agar Portal aman di Next.js App Router)
@@ -29,7 +28,7 @@ export default function PosterLightBox({ src, alt, className }: PosterLightBoxPr
   // 2. UX Logic: Scroll Lock & Escape Key
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = "hidden"; // Kunci scroll halaman utama
+      document.body.style.overflow = "hidden"; 
 
       const handleKeyDown = (e: KeyboardEvent) => {
         if (e.key === "Escape") setIsOpen(false);
@@ -37,7 +36,7 @@ export default function PosterLightBox({ src, alt, className }: PosterLightBoxPr
       window.addEventListener("keydown", handleKeyDown);
 
       return () => {
-        document.body.style.overflow = "auto"; // Buka kunci scroll
+        document.body.style.overflow = "auto"; 
         window.removeEventListener("keydown", handleKeyDown);
       };
     }
@@ -52,7 +51,6 @@ export default function PosterLightBox({ src, alt, className }: PosterLightBoxPr
         type="button"
         onClick={() => setIsOpen(true)}
         className={cn(
-          // Mengisi parent container sepenuhnya
           "group relative cursor-zoom-in overflow-hidden rounded-xl bg-gray-200 flex items-center justify-center w-full h-full border border-gray-200 shadow-sm hover:shadow-md transition-all",
           className
         )}
@@ -104,9 +102,7 @@ export default function PosterLightBox({ src, alt, className }: PosterLightBoxPr
 
           {/* Container Gambar Fullscreen */}
           <div className="relative z-10 w-full h-full flex items-center justify-center pointer-events-none p-2 md:p-10">
-            {/* Wrapper Max Size */}
             <div className="relative w-full h-full max-w-[95vw] max-h-[90vh]">
-              {/* Di Popup pakai 'contain' agar gambar UTUH terlihat semua (tidak terpotong) */}
               <Image
                 src={src}
                 alt={alt}

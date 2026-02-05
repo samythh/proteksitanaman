@@ -1,11 +1,10 @@
-// File: src/components/sections/LeadersSection.tsx
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { getStrapiMedia } from "@/lib/strapi/utils";
-import { X, User } from "lucide-react";
-import { useTranslations } from "next-intl"; 
+import { User } from "lucide-react";
+import { useTranslations } from "next-intl";
+import PosterLightBox from "@/components/ui/PosterLightBox";
 
 // --- TIPE DATA ---
 interface LeaderItem {
@@ -33,9 +32,6 @@ interface LeadersSectionProps {
 
 export default function LeadersSection({ data }: LeadersSectionProps) {
    const [activeTab, setActiveTab] = useState(0);
-   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
-
-   //  2. Inisialisasi Translation
    const t = useTranslations("LeadersSection");
 
    if (!data?.groups || data.groups.length === 0) return null;
@@ -98,31 +94,20 @@ export default function LeadersSection({ data }: LeadersSectionProps) {
                      <div className="flex flex-col items-center justify-center mb-20 relative">
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 md:w-80 md:h-80 bg-green-100 rounded-full blur-3xl opacity-60 -z-10 animate-pulse"></div>
 
-                        <div
-                           className="group relative w-56 h-72 md:w-64 md:h-80 mb-6 cursor-pointer perspective-1000"
-                           onClick={() => setZoomedImage(getStrapiMedia(activeGroup.current_leader?.photo?.url))}
-                        >
+                        <div className="group relative w-56 h-72 md:w-64 md:h-80 mb-6 perspective-1000">
                            <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-2xl border-[6px] border-white ring-1 ring-gray-100 transition-transform duration-500 group-hover:scale-[1.02] group-hover:rotate-1">
+
                               {activeGroup.current_leader.photo?.url ? (
-                                 <Image
+                                 <PosterLightBox
                                     src={getStrapiMedia(activeGroup.current_leader.photo.url) || ""}
                                     alt={activeGroup.current_leader.name}
-                                    fill
-                                    className="object-cover transition-transform duration-700 group-hover:scale-110"
+                                    className="w-full h-full rounded-none border-none shadow-none bg-transparent"
                                  />
                               ) : (
                                  <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-400">
                                     <User size={80} />
                                  </div>
                               )}
-
-                              {/* Overlay Icon Zoom */}
-                              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-[2px]">
-                                 <span className="text-white text-sm font-bold bg-black/50 px-4 py-2 rounded-full border border-white/30">
-                                    {/*  3. Gunakan Translation 'View Photo' */}
-                                    {t("view_photo")}
-                                 </span>
-                              </div>
                            </div>
                         </div>
 
@@ -137,7 +122,7 @@ export default function LeadersSection({ data }: LeadersSectionProps) {
                      </div>
                   )}
 
-                  {/* Garis Pemisah Mewah */}
+                  {/* Garis Pemisah */}
                   {activeGroup.past_leaders.length > 0 && (
                      <div className="relative flex items-center justify-center mb-12">
                         <div className="absolute inset-0 flex items-center">
@@ -145,7 +130,6 @@ export default function LeadersSection({ data }: LeadersSectionProps) {
                         </div>
                         <div className="relative bg-gray-50 px-6 py-2 rounded-full border border-gray-200 shadow-sm">
                            <span className="text-gray-500 text-xs md:text-sm font-bold uppercase tracking-widest">
-                              {/*  4. Gunakan Translation 'Previous Period' */}
                               {t("past_period")}
                            </span>
                         </div>
@@ -160,26 +144,18 @@ export default function LeadersSection({ data }: LeadersSectionProps) {
                            className="group flex flex-col items-center text-center w-full animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-forwards"
                            style={{ animationDelay: `${idx * 150}ms` }}
                         >
-                           {/* Foto Card */}
-                           <div
-                              className="relative w-36 h-48 md:w-44 md:h-56 mb-4 rounded-xl overflow-hidden shadow-md bg-white border border-gray-100 transition-all duration-300 group-hover:-translate-y-2 group-hover:shadow-xl cursor-pointer"
-                              onClick={() => setZoomedImage(getStrapiMedia(leader.photo?.url))}
-                           >
+                           <div className="relative w-36 h-48 md:w-44 md:h-56 mb-4 rounded-xl overflow-hidden shadow-md bg-white border border-gray-100 transition-all duration-300 group-hover:-translate-y-2 group-hover:shadow-xl">
                               {leader.photo?.url ? (
-                                 <Image
+                                 <PosterLightBox
                                     src={getStrapiMedia(leader.photo.url) || ""}
                                     alt={leader.name}
-                                    fill
-                                    className="object-cover transition-transform duration-500 group-hover:scale-110"
+                                    className="w-full h-full rounded-none border-none shadow-none"
                                  />
                               ) : (
                                  <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-300">
                                     <User size={48} />
                                  </div>
                               )}
-
-                              {/* Hover Overlay */}
-                              <div className="absolute inset-0 bg-[#005320]/0 group-hover:bg-[#005320]/10 transition-colors duration-300"></div>
                            </div>
 
                            <h5 className="text-sm md:text-base font-bold text-gray-700 leading-tight group-hover:text-[#005320] mb-1.5 transition-colors px-2">
@@ -195,35 +171,6 @@ export default function LeadersSection({ data }: LeadersSectionProps) {
                </div>
             </div>
          </div>
-
-         {/* --- MODAL POPUP (ZOOM) --- */}
-         {zoomedImage && (
-            <div
-               className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300"
-               onClick={() => setZoomedImage(null)}
-            >
-               <button
-                  className="absolute top-6 right-6 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-full transition-all z-50 transform hover:rotate-90 duration-300"
-                  onClick={() => setZoomedImage(null)}
-               >
-                  <X size={32} />
-               </button>
-
-               <div
-                  className="relative w-full max-w-4xl h-[80vh] flex items-center justify-center"
-                  onClick={(e) => e.stopPropagation()}
-               >
-                  <Image
-                     src={zoomedImage}
-                     alt="Leader Zoom"
-                     fill
-                     className="object-contain drop-shadow-2xl"
-                     priority
-                  />
-               </div>
-            </div>
-         )}
-
       </section>
    );
 }
